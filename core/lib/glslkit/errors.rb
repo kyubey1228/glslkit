@@ -2,4 +2,8 @@
 
 module Glslkit
   class UnknownTypeError < StandardError; end
+  class IncludeNotFound < StandardError; end
+  class PathTraversalError < StandardError; end
+  class CircularIncludeError < StandardError; end
+  class VersionConflictError < StandardError; end
 end
