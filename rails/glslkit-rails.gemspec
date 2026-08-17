@@ -20,7 +20,8 @@ Gem::Specification.new do |spec|
   spec.metadata["source_code_uri"] = "#{spec.homepage}/tree/main/rails"
   spec.metadata["changelog_uri"] = "#{spec.homepage}/blob/main/rails/CHANGELOG.md"
 
-  spec.files = Dir.glob("lib/**/*.rb") + ["glslkit-rails.gemspec"]
+  spec.files = Dir.glob("lib/**/*.{rb,rake}") +
+    ["glslkit-rails.gemspec", "README.md", "CHANGELOG.md", "LICENSE.txt"]
   spec.require_paths = ["lib"]
 
   spec.add_dependency "glslkit", "~> 0.1"
