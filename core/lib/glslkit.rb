@@ -11,6 +11,7 @@ require_relative "glslkit/source"
 require_relative "glslkit/reflection"
 require_relative "glslkit/preprocessor"
 require_relative "glslkit/manifest"
+require_relative "glslkit/minifier"
 
 module Glslkit
 end
