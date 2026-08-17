@@ -4,6 +4,7 @@ require "set"
 require_relative "errors"
 require_relative "source"
 require_relative "source_map"
+require_relative "reflection"
 
 module Glslkit
   class Preprocessor
@@ -27,7 +28,7 @@ module Glslkit
       header.concat(run.extensions)
 
       code = "#{(header + run.body).join("\n")}\n"
-      Source.new(code: code, source_map: run.source_map)
+      Source.new(code: code, source_map: run.source_map, reflection: Reflection.new(code))
     end
 
     private

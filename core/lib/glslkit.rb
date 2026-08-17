@@ -8,6 +8,7 @@ require_relative "glslkit/resolvers/file_system"
 require_relative "glslkit/resolvers/hash"
 require_relative "glslkit/source_map"
 require_relative "glslkit/source"
+require_relative "glslkit/reflection"
 require_relative "glslkit/preprocessor"
 
 module Glslkit
