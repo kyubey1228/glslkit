@@ -5,6 +5,10 @@
 *.gem
 .DS_Store
 
+# Claude Code向けの内部ドキュメント。ローカルには残すがリポジトリには含めない
+/CLAUDE.md
+/SPEC.md
+
 # generated at runtime by the dummy Rails app used in rails/test
 /rails/test/dummy/tmp/
 /rails/test/dummy/log/
