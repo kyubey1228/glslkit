@@ -11,7 +11,7 @@ attribute / output / uniform block）を成果物として残すライブラリ�
 このリフレクションJSONを消費して、実行時の `getActiveUniform` ループを不要にする
 ことを見据えている。v0.1ではwasm側は実装しないが、そのための契約面
 （[リフレクションJSONスキーマ](spec/schema/reflection-v1.json)）を確定させることが
-最重要目的。詳細は [SPEC.md](SPEC.md) を参照。
+最重要目的。
 
 ## 構成
 
