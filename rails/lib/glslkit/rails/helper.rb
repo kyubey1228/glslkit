@@ -46,21 +46,21 @@ module Glslkit
         content.gsub("</", '<\/')
       end
 
-      # javascript_tagと全く同じ3値のnonce解釈にする: true=強制、false=抑止、
-      # 未指定なら ActionView::Helpers::JavaScriptHelper.auto_include_nonce
-      # の場合だけ自動付与する。この auto_include_nonce は
-      # config.content_security_policy_nonce_auto (デフォルトfalse。app側の
-      # 明示的なopt-inが必要) に加えて、nonce_directivesがscript系
-      # ディレクティブと交差していること、nonce_generatorが設定済みで
-      # あることをRailsのAction Viewのrailtieが起動時に判定した結果。
-      # content_security_policy? (このリクエストで実際にCSPが有効か) では
-      # 判定しない — javascript_tag自身もそこは見ておらず、生成器さえ
-      # 設定されていればnonceは発行されるため。
+      # true=強制、false=抑止、未指定ならこのリクエストでCSPが実際に有効な
+      # 場合だけ自動付与する。
+      #
+      # 当初は javascript_tag と全く同じ規約
+      # (ActionView::Helpers::JavaScriptHelper.auto_include_nonce)に合わせて
+      # いたが、これは config.content_security_policy_nonce_auto という
+      # Rails 8.1で新規追加された設定に依存しており、railties >= 7.1という
+      # このgemの依存下限では単純にメソッドが存在せずNoMethodErrorになる
+      # (CIでRuby 3.1 → Rails 7.2に解決された際に発覚)。content_security_policy?
+      # はRails 7.1時点から存在するので、こちらを使う。
       def apply_glsl_nonce!(html_options)
         if html_options[:nonce] == false
           html_options.delete(:nonce)
         elsif html_options[:nonce] == true ||
-            (!html_options.key?(:nonce) && ActionView::Helpers::JavaScriptHelper.auto_include_nonce)
+            (!html_options.key?(:nonce) && respond_to?(:content_security_policy?) && content_security_policy?)
           html_options[:nonce] = content_security_policy_nonce
         end
       end

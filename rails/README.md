@@ -56,9 +56,9 @@ Glslkit::Rails.manifest # => Hash (productionでは読み込み結果をメモ�
 ```
 
 - インライン埋め込みの内容は `</script` をエスケープしている
-- CSPを `config.content_security_policy_nonce_auto = true` で有効にしている場合、
-  Railsの `javascript_tag` と同じ規約で自動的に `nonce` 属性を付与する
-  (`nonce: false` で明示的に抑止することもできる)
+- そのリクエストでCSPが実際に有効な場合(`content_security_policy?`)、
+  自動的に `nonce` 属性を付与する。`nonce: true`/`false` で強制・抑止も
+  できる
 
 ## 実践的な例
 

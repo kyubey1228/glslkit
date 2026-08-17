@@ -13,6 +13,7 @@ class GlslHelperTestController < ActionController::Base
   def with_csp
     render inline: <<~ERB, layout: false
       <%= glsl_script_tag "pbr.vert" %>
+      <%= glsl_script_tag "pbr.frag" %>
     ERB
   end
 

@@ -34,8 +34,8 @@ class DummyAppHelperTest < Minitest::Test
     assert_equal %w[material pbr], manifest["programs"].keys.sort
   end
 
-  def test_nonce_is_applied_automatically_when_configured
-    result = get("show")
+  def test_nonce_is_applied_automatically_when_the_action_has_an_active_csp_policy
+    result = get("with_csp")
     body = result["body"]
 
     nonces = body.scan(/nonce="([0-9a-f]+)"/).flatten
@@ -45,10 +45,10 @@ class DummyAppHelperTest < Minitest::Test
     assert_equal nonces[0], nonces[1]
   end
 
-  def test_nonce_is_applied_even_when_the_action_has_its_own_csp_policy
-    body = get("with_csp")["body"]
+  def test_no_nonce_without_an_active_csp_policy
+    body = get("show")["body"]
 
-    assert_match(/nonce="[0-9a-f]+"/, body)
+    refute_includes body, "nonce="
   end
 
   def test_nonce_false_suppresses_the_attribute
