@@ -1,22 +1,22 @@
 # frozen_string_literal: true
 
 module Glslkit
-  # Duck-typed interface for resolving #include requests. Not meant to be
-  # inherited from — Glslkit::Resolvers::FileSystem and ::Hash below simply
-  # implement the same method shape. Rails' and a future ruby.wasm's own
-  # resolvers only need to match this shape too.
+  # #include のリクエストを解決するダックタイピングのインタフェース。継承を
+  # 強制するものではない — 下の Glslkit::Resolvers::FileSystem と ::Hash は
+  # 単にこれと同じメソッド形状を実装しているだけ。Railsや将来のruby.wasm側の
+  # resolverも同じ形状に合わせればよい。
   #
   #   read(request, from:) -> [canonical_path, content]
   #
-  #     request        - the string written after #include, e.g. "common/math.glsl"
-  #     from            - the includer's canonical_path, or nil at the entry
-  #                       point (and also passed as nil for `#include <...>`,
-  #                       which must skip relative resolution entirely)
-  #     canonical_path  - a stable, load-path-relative identifier for the
-  #                       resolved file (used for cycle detection, #pragma
-  #                       once, and Glslkit::SourceMap#files)
+  #     request        - #include の後に書かれた文字列。例 "common/math.glsl"
+  #     from            - 呼び出し元(includeした側)のcanonical_path。
+  #                       エントリポイントではnil (`#include <...>` の場合も
+  #                       常にnilを渡し、相対探索を完全にスキップさせる)
+  #     canonical_path  - 解決したファイルを表す、load_path相対の安定した
+  #                       識別子 (循環検出、#pragma once、
+  #                       Glslkit::SourceMap#files で使う)
   #
-  #   Raise Glslkit::IncludeNotFound when request cannot be resolved.
+  #   requestが解決できない場合は Glslkit::IncludeNotFound を raise すること。
   module Resolver
   end
 end

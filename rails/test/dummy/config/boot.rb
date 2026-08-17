@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
-# This dummy app has no Gemfile of its own — it is a test fixture that boots
-# inside the monorepo's top-level bundle (which path-references both gems).
+# このダミーアプリは自前のGemfileを持たない — monorepoのトップレベルの
+# バンドル(両gemをpath参照している)の中で起動するテスト用フィクスチャ。
 ENV["BUNDLE_GEMFILE"] ||= File.expand_path("../../../../Gemfile", __dir__)
 
 require "bundler/setup"

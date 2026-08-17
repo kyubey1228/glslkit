@@ -25,9 +25,9 @@ Gem::Specification.new do |spec|
 
   spec.add_dependency "glslkit", "~> 0.1"
   spec.add_dependency "railties", ">= 7.1"
-  # Pinned to the Compiler API confirmed against the installed 1.3.2:
-  # Propshaft::Compiler#compile(asset, input), #referenced_by(asset), and
-  # Propshaft::Compilers#register(mime_type, klass). Not verified against
-  # earlier 1.x releases, so no wider range is claimed.
+  # 実際にインストールされた1.3.2で確認したCompiler API
+  # (Propshaft::Compiler#compile(asset, input), #referenced_by(asset),
+  # Propshaft::Compilers#register(mime_type, klass)) に合わせて固定している。
+  # それより古い1.x系では確認していないため、より広い範囲は主張しない。
   spec.add_dependency "propshaft", ">= 1.3.2"
 end

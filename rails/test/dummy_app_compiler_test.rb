@@ -25,7 +25,7 @@ class DummyAppCompilerTest < Minitest::Test
     assert_equal "x-shader/x-vertex", result["vert"]
     assert_equal "x-shader/x-fragment", result["frag"]
     assert_equal "text/plain", result["glsl"]
-    # register_alias must not have overwritten the pre-existing text/plain => :text lookup
+    # register_aliasが既存の text/plain => :text という登録を上書きしていないこと
     assert_equal "text", result["text_plain_symbol"]
     assert_equal "text/plain", result["text_plain_string"]
   end

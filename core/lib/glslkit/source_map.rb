@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
 module Glslkit
-  # Maps the file indices used in emitted `#line <n> <index>` directives
-  # back to the canonical_path each index refers to.
+  # 出力される `#line <n> <index>` ディレクティブで使われるファイル
+  # インデックスを、各インデックスが指すcanonical_pathに逆引きする。
   class SourceMap
     def initialize
       @files = []

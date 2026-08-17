@@ -2,10 +2,11 @@
 
 require "open3"
 
-# Drives the dummy Rails app (test/dummy) as a real subprocess via bin/rails,
-# rather than booting it in-process — so these tests exercise the exact same
-# entry point a deployed app would use, and initialization-order bugs can't
-# hide behind an already-booted test process.
+# ダミーRailsアプリ(test/dummy)を、in-processで起動するのではなく
+# bin/rails経由の実サブプロセスとして動かす — こうすることでテストは
+# 実際のデプロイ環境と全く同じエントリポイントを通ることになり、
+# 初期化順序に起因するバグが「既に起動済みのテストプロセス」の裏に
+# 隠れてしまうことがない。
 module DummyAppTestHelper
   DUMMY_ROOT = File.expand_path("dummy", __dir__)
 

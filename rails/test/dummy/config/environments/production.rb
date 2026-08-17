@@ -5,13 +5,15 @@ Rails.application.configure do
   config.eager_load = true
   config.public_file_server.enabled = true
 
-  # Precompile-only: no on-the-fly compile fallback, so a passing
-  # assets:precompile test actually proves the manifest was written, rather
-  # than silently succeeding via a live-compile path that masks a broken task.
+  # precompileのみ: その場コンパイルへのフォールバックを無効にする。
+  # これにより assets:precompile のテストが通ることが「実際にマニフェスト
+  # が書き出された」ことの証明になる(ライブコンパイル経路にすり抜けられて
+  # 壊れたタスクが見逃されることがない)。
   config.assets.compile = false
 
-  # Redirects precompile output outside the repo during tests, so running the
-  # test suite never leaves generated assets committed under test/dummy/public.
+  # テスト実行中はprecompileの出力先をリポジトリ外に逃がす。これにより
+  # テストスイートを実行しても test/dummy/public 配下に生成物がコミット
+  # されてしまうことがない。
   if ENV["GLSLKIT_TEST_PUBLIC_ROOT"].present?
     config.paths["public"] = ENV["GLSLKIT_TEST_PUBLIC_ROOT"]
   end

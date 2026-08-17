@@ -5,14 +5,13 @@ require_relative "types"
 require_relative "errors"
 
 module Glslkit
-  # Scans flattened (post-#include) GLSL for top-level in/out/uniform
-  # declarations. This is intentionally not a real parser: it strips
-  # comments and preprocessor directive lines (#version, #line, #ifdef, ...
-  # anything glslkit's own Preprocessor may have left behind), tracks {}
-  # nesting depth to skip anything that isn't a depth-0 declaration (function
-  # bodies, block bodies), then regex-matches each depth-0 `;`-terminated
-  # statement individually. struct definitions, uniform block member lists,
-  # and const/local declarations are deliberately not parsed further.
+  # 平坦化済み(#include展開後)のGLSLをスキャンして、トップレベルの
+  # in/out/uniform宣言を抽出する。これは意図的に本格的なパーサにはしていない:
+  # コメントと、プリプロセッサディレクティブ行(#version, #line, #ifdefなど、
+  # glslkit自身のPreprocessorが残しうるもの全般)を除去し、{}のネスト深度を
+  # 追跡して深度0の宣言以外(関数本体、ブロック本体)をスキップし、深度0の
+  # `;`区切り文を1つずつ正規表現でマッチさせる。struct定義、uniform blockの
+  # メンバリスト、const/ローカル宣言は意図的にそれ以上パースしない。
   class Reflection
     Attribute = Struct.new(:name, :type, :location, :array_size, keyword_init: true)
     Uniform = Struct.new(:name, :type, :array_size, :setter, :matrix, :sampler, keyword_init: true)
@@ -47,10 +46,10 @@ module Glslkit
       without_comments.gsub(/^[ \t]*#.*$/, "")
     end
 
-    # Splits on `;` seen at brace-depth 0 only, so semicolons inside function
-    # bodies or uniform block member lists never end a statement. A depth-0
-    # closing `}` NOT immediately followed by `;` (i.e. a function/control
-    # body, not a uniform block) discards whatever had been accumulating.
+    # 波括弧の深度が0の時に現れた`;`だけで分割する。これにより関数本体や
+    # uniform blockのメンバリスト内の`;`が文の終端として扱われることはない。
+    # 深度0に戻る`}`の直後に`;`が続かない場合(つまりuniform blockではなく
+    # 関数/制御構文の本体である場合)は、それまで溜めていたものを破棄する。
     def split_top_level_statements(code)
       scanner = StringScanner.new(code)
       statements = []

@@ -5,11 +5,11 @@ require "json"
 module Glslkit
   module Rails
     class << self
-      # In production, reads the manifest written by `rake assets:precompile`
-      # (memoized: the file doesn't change for the life of the process). In
-      # development/test it's rebuilt on every call from the current shader
-      # sources, matching config.glslkit.line_directives/minify's own
-      # dev-vs-production split (SPEC.md §4.1, §4.4).
+      # productionでは `rake assets:precompile` が書き出したマニフェストを
+      # 読むだけ(メモ化する: プロセスが生きている間、ファイルは変化しない
+      # ため)。development/testでは呼び出すたびに現在のシェーダソースから
+      # 再構築する。これは config.glslkit.line_directives/minify の
+      # dev-vs-production の使い分け方針(SPEC.md §4.1, §4.4)と同じ考え方。
       def manifest
         if ::Rails.env.production?
           @manifest ||= read_precompiled_manifest

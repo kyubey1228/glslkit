@@ -10,8 +10,8 @@ require_relative "rails/railtie"
 
 module Glslkit
   module Rails
-    # NOTE: inside this namespace, the bare constant `Rails` resolves to
-    # `Glslkit::Rails` itself, not the top-level Rails framework. Always
-    # write `::Rails` when referring to the framework (e.g. `::Rails::Engine`).
+    # 注意: この名前空間の中では、素の定数`Rails`は`Glslkit::Rails`自身に
+    # 解決される。トップレベルのRailsフレームワークではない。フレームワーク
+    # を指すときは常に `::Rails` と書くこと (例: `::Rails::Engine`)。
   end
 end

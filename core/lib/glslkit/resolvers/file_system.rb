@@ -4,15 +4,15 @@ require_relative "../errors"
 
 module Glslkit
   module Resolvers
-    # Resolves #include requests against a set of load paths on disk.
-    # canonical_path is always expressed relative to whichever load path
-    # matched (e.g. "common/math.glsl"), never as an absolute filesystem
-    # path — the manifest this feeds into is servable to a browser, so local
-    # paths must never leak into it.
+    # ディスク上のload_paths群に対して#includeのリクエストを解決する。
+    # canonical_pathは常に、マッチしたload_pathからの相対パスとして表現される
+    # (例 "common/math.glsl")。絶対パスになることはない —
+    # この結果を元に作られるマニフェストはブラウザに配信されるものなので、
+    # ローカルの絶対パスを漏らしてはならない。
     class FileSystem
       def initialize(load_paths:)
         @load_paths = load_paths.map { |path| File.expand_path(path) }
-        @absolute_paths = {} # canonical_path => absolute path, for relative lookups
+        @absolute_paths = {} # canonical_path => 絶対パス。相対探索のためのキャッシュ
       end
 
       def read(request, from: nil)
@@ -34,9 +34,10 @@ module Glslkit
           return candidate if File.file?(candidate)
         end
 
-        # Bounds are checked before existence (rather than raising IncludeNotFound
-        # for an escaping request that happens not to exist), so PathTraversalError
-        # doesn't depend on what's actually on disk outside load_paths.
+        # 存在確認より先に境界チェックを行う(escapeしているのにたまたま存在
+        # しないrequestに対してIncludeNotFoundを出すのではなく)。これにより
+        # PathTraversalErrorの判定が、load_paths外に実際に何が存在するかに
+        # 依存しなくなる。
         if candidates.any? { |candidate| !within_any_load_path?(candidate) }
           raise PathTraversalError, "#include #{request.inspect} escapes the configured load_paths"
         end

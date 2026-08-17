@@ -4,12 +4,12 @@ require "time"
 
 module Glslkit
   module Rails
-    # Discovers vertex/fragment pairs under config.glslkit.paths and builds
-    # the reflection-v1.json manifest (Glslkit::Manifest, M4) for all of them.
-    # stage.url is resolved through Rails.application.assets.resolver, which
-    # is exactly what asset_path/asset_url use internally — Dynamic in
-    # development, or Static (reading Propshaft's own just-written
-    # .manifest.json) once assets:precompile has run.
+    # config.glslkit.paths 配下からvertex/fragmentのペアを検出し、その
+    # すべてについて reflection-v1.json のマニフェスト(Glslkit::Manifest, M4)
+    # を組み立てる。stage.urlは Rails.application.assets.resolver 経由で
+    # 解決する。これはasset_path/asset_urlが内部で使っているのとまさに同じ
+    # 経路であり、developmentではDynamic、assets:precompile実行後はStatic
+    # (Propshaftが直前に書いた.manifest.jsonを読む)になる。
     class ManifestBuilder
       def initialize(app)
         @app = app
@@ -33,10 +33,10 @@ module Glslkit
         glslkit_config.paths.map { |path| @app.root.join(path).to_s }
       end
 
-      # {"pbr" => {vertex: "pbr.vert", fragment: "pbr.frag"}, ...}, skipping
-      # any .vert/.frag left without a same-named partner (SPEC.md §2.4/§3:
-      # a program requires both stages, but not every .vert/.frag file under
-      # app/shaders is necessarily meant to be one, e.g. a shared partial).
+      # {"pbr" => {vertex: "pbr.vert", fragment: "pbr.frag"}, ...} を返す。
+      # 同名の相方が無い.vert/.fragはスキップする(SPEC.md §2.4/§3: プログラム
+      # は両ステージが必須だが、app/shaders配下の.vert/.frag全てがプログラム
+      # になることを意図しているわけではない。例えば共有partialの場合)。
       def programs
         by_name = Hash.new { |h, k| h[k] = {} }
 

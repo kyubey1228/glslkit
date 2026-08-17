@@ -2,10 +2,11 @@
 
 require_relative "boot"
 
-require "rails" # the "railties" gem's entry point; loads Rails::Application + ActionDispatch, nothing more (not rails/all)
-# Needed so ActionDispatch::Static (which Propshaft's dev-mode Server middleware
-# sits behind) can resolve ActionController::Base. Deliberately not requiring
-# active_record/railtie — no DB config needed for anything glslkit-rails does.
+require "rails" # "railties" gemの入り口。Rails::Application + ActionDispatchのみを読み込む(rails/allではない)
+# ActionDispatch::Static (Propshaftのdev-modeのServerミドルウェアはその
+# 裏側に位置する) が ActionController::Base を参照するために必要。
+# active_record/railtie は意図的にrequireしていない —
+# glslkit-railsが行うことにDB設定は一切不要なため。
 require "action_controller/railtie"
 require "glslkit/rails"
 

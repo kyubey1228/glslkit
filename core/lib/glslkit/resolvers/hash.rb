@@ -4,10 +4,10 @@ require_relative "../errors"
 
 module Glslkit
   module Resolvers
-    # Looks requests up directly in a flat Hash of {request => content}.
-    # Used by the wasm-side runtime (no filesystem) and in tests. `from` is
-    # accepted for interface parity but ignored: there is no directory
-    # structure to resolve relative to.
+    # {request => content} というフラットなHashを直接引くだけ。ファイル
+    # システムを持たないwasm側ランタイムやテストで使う。`from`はインタ
+    # フェースの形を合わせるために受け取るが無視する。ディレクトリ構造が
+    # 存在しないため、相対解決のしようがない。
     class Hash
       def initialize(files)
         @files = files

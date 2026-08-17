@@ -5,12 +5,12 @@ require "propshaft/compiler"
 
 module Glslkit
   module Rails
-    # Registered against x-shader/x-vertex, x-shader/x-fragment, and
-    # text/plain (§4.1). The first two are exclusive to us, but text/plain is
-    # shared with every other plain-text asset Propshaft might serve — since
-    # Propshaft keys compiler registration by content_type, not extension,
-    # this compiler would otherwise run on unrelated text/plain assets too.
-    # The extension guard below is what keeps that safe.
+    # x-shader/x-vertex, x-shader/x-fragment, text/plain (§4.1) の3つに
+    # 登録される。前者2つは我々専用だが、text/plainはPropshaftが配信しうる
+    # 他のあらゆるプレーンテキストアセットと共有される — Propshaftはcompiler
+    # の登録をcontent_typeで紐付ける(拡張子ではない)ため、これが無いと
+    # このcompilerが無関係なtext/plainアセットにまで作用してしまう。
+    # 以下の拡張子ガードがそれを防いでいる。
     class Compiler < ::Propshaft::Compiler
       RELEVANT_EXTENSIONS = %w[.glsl .vert .frag].freeze
 

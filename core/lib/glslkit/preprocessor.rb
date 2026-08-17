@@ -39,7 +39,7 @@ module Glslkit
 
     private
 
-    # Mutable state threaded through one top-level #process call.
+    # トップレベルの#process呼び出し1回分の間で共有される可変状態。
     class Run
       attr_accessor :version
       attr_reader :source_map, :extensions, :body, :ancestor_stack

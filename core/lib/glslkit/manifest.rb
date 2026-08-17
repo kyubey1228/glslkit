@@ -5,11 +5,12 @@ require "digest"
 require_relative "errors"
 
 module Glslkit
-  # Builds the reflection-v1.json manifest (spec/schema/reflection-v1.json)
-  # out of a vertex+fragment Source pair per program. `url` for each stage is
-  # an opaque, externally-supplied string (e.g. Propshaft's fingerprinted
-  # asset path) — it has nothing to do with glslkit's own digests and is
-  # never derived from one, only stored as given.
+  # プログラムごとのvertex+fragment Sourceペアから reflection-v1.json の
+  # マニフェスト(spec/schema/reflection-v1.json)を組み立てる。各stageの
+  # `url`は呼び出し側から渡される不透明な文字列(例: Propshaftの
+  # フィンガープリント付きアセットパス)である — glslkit自身のdigestとは
+  # 無関係で、digestから導出することはなく、渡された値をそのまま格納する
+  # だけである。
   class Manifest
     def initialize(generated_at:)
       @generated_at = generated_at
@@ -110,9 +111,9 @@ module Glslkit
       end
     end
 
-    # {vertex: [...], fragment: [...]} of entries responding to #name =>
-    # ordered Hash of name => {stage => entry}, in first-seen order
-    # (vertex entries first, then any fragment-only names).
+    # #nameを持つエントリの {vertex: [...], fragment: [...]} を受け取り、
+    # 初出順(vertexのエントリが先、fragmentのみの名前はその後)を保った
+    # name => {stage => entry} の順序付きHashを返す。
     def group_by_name(stage_entries)
       grouped = {}
       stage_entries.each do |stage, entries|

@@ -11,14 +11,15 @@ module Glslkit
       config.glslkit.line_directives = !::Rails.env.production?
       config.glslkit.manifest_path = "glsl-manifest.json"
 
-      # Uses Mime::Type.register (the path Propshaft::Asset#content_type
-      # itself resolves through), not Marcel directly — Marcel is only an
-      # internal, transitive detail of Propshaft, not something to couple to.
+      # Mime::Type.register を使う (Propshaft::Asset#content_type 自身が
+      # 実際に使っている経路)。Marcelを直接使うことはしない — MarcelはPropshaft
+      # の内部的・推移的な実装詳細に過ぎず、そこに結合すべきではない。
       initializer "glslkit.register_mime_types" do
         ::Mime::Type.register "x-shader/x-vertex", :vert unless ::Mime::Type.lookup_by_extension("vert")
         ::Mime::Type.register "x-shader/x-fragment", :frag unless ::Mime::Type.lookup_by_extension("frag")
-        # register_alias, not register: "text/plain" is already registered under :text,
-        # and re-registering the same string under :glsl would overwrite that lookup entry.
+        # register ではなく register_alias を使う: "text/plain" は既に
+        # :text として登録済みなので、同じ文字列を :glsl として register で
+        # 再登録するとそのlookupエントリを上書きしてしまう。
         ::Mime::Type.register_alias "text/plain", :glsl unless ::Mime::Type.lookup_by_extension("glsl")
       end
 

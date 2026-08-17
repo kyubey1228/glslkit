@@ -16,7 +16,7 @@ class ResolversFileSystemTest < Minitest::Test
 
   def test_resolves_relative_to_the_includer_when_from_is_given
     resolver = Glslkit::Resolvers::FileSystem.new(load_paths: [File.join(FIXTURES, "relative")])
-    resolver.read("entry.frag", from: nil) # populates the internal cache for "entry.frag"
+    resolver.read("entry.frag", from: nil) # "entry.frag"の内部キャッシュを作っておく
 
     canonical, = resolver.read("sub/foo.glsl", from: "entry.frag")
     canonical2, content = resolver.read("bar.glsl", from: canonical)

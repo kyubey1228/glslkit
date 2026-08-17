@@ -12,10 +12,10 @@ namespace :glslkit do
   end
 end
 
-# Runs after Propshaft's own assets:precompile (propshaft/railties/assets.rake),
-# so Rails.application.assets.resolver already sees Propshaft's just-written
-# .manifest.json and resolves digested URLs from it rather than the live
-# filesystem scan.
+# Propshaft自身のassets:precompile (propshaft/railties/assets.rake) の
+# 後に実行される。そのためRails.application.assets.resolverは、その場での
+# ファイルシステムスキャンではなく、Propshaftが直前に書いた.manifest.json
+# を見て、そこからdigest付きURLを解決する。
 Rake::Task["assets:precompile"].enhance do
   Rake::Task["glslkit:reflect"].invoke
 end

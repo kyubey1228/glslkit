@@ -3,9 +3,9 @@
 require_relative "errors"
 
 module Glslkit
-  # The single source of truth mapping a GLSL type name to its WebGL2 setter.
-  # A wasm-side WebGL binding is expected to call Types.setter_for("mat4") etc.
-  # rather than re-deriving this table.
+  # GLSLの型名をWebGL2のsetterに対応付ける唯一の正。wasm側のWebGL
+  # バインディングはこのテーブルを自前で再実装するのではなく、
+  # Types.setter_for("mat4") 等を呼び出すことを想定している。
   module Types
     NON_MATRIX_SETTERS = {
       "float" => "uniform1fv",
