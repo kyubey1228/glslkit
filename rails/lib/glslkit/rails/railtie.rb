@@ -36,6 +36,10 @@ module Glslkit
       rake_tasks do
         load File.expand_path("../../tasks/glslkit.rake", __dir__)
       end
+
+      initializer "glslkit.view_helpers" do
+        ActiveSupport.on_load(:action_view) { include Glslkit::Rails::Helper }
+      end
     end
   end
 end

@@ -18,5 +18,11 @@ module Dummy
     config.eager_load = false
     config.logger = Logger.new(IO::NULL)
     config.log_level = :fatal
+
+    # glsl_script_tag/glsl_manifest_tagのCSP nonce対応をエンドツーエンドで
+    # 検証するためのテスト用設定。実アプリで有効にする場合と同じキーを使う。
+    config.content_security_policy_nonce_generator = ->(_request) { SecureRandom.hex(16) }
+    config.content_security_policy_nonce_directives = %w[script-src]
+    config.content_security_policy_nonce_auto = true
   end
 end

@@ -6,6 +6,7 @@ require_relative "rails/version"
 require_relative "rails/compiler"
 require_relative "rails/manifest_builder"
 require_relative "rails/manifest_reader"
+require_relative "rails/helper"
 require_relative "rails/railtie"
 
 module Glslkit
