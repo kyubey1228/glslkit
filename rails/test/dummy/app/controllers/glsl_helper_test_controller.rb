@@ -28,6 +28,14 @@ class GlslHelperTestController < ActionController::Base
     ERB
   end
 
+  def material
+    render inline: <<~ERB, layout: false
+      <%= glsl_script_tag "material.vert" %>
+      <%= glsl_script_tag "material.frag" %>
+      <%= glsl_manifest_tag %>
+    ERB
+  end
+
   content_security_policy(only: :with_csp) do |policy|
     policy.script_src :self
   end

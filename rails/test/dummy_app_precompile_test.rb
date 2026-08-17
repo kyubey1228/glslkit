@@ -29,6 +29,30 @@ class DummyAppPrecompileTest < Minitest::Test
     end
   end
 
+  def test_material_program_reflects_uniform_arrays_and_a_shared_uniform_block
+    Dir.mktmpdir do |public_root|
+      stdout, stderr, status = precompile(public_root)
+      assert status.success?, "#{stdout}\n#{stderr}"
+
+      program = read_manifest(public_root)["programs"]["material"]
+      uniforms_by_name = program["uniforms"].to_h { |u| [u["name"], u] }
+
+      assert_equal %w[a_position a_normal a_uv], program["attributes"].map { |a| a["name"] }
+      assert_equal [0, 1, 2], program["attributes"].map { |a| a["location"] }
+
+      light_positions = uniforms_by_name.fetch("u_light_positions")
+      assert_equal "vec3", light_positions["type"]
+      assert_equal 4, light_positions["array_size"]
+      assert_equal "uniform3fv", light_positions["setter"]
+
+      camera_block = program["uniform_blocks"].find { |b| b["name"] == "Camera" }
+      refute_nil camera_block
+      assert_equal "std140", camera_block["layout"]
+      assert_equal 0, camera_block["binding"]
+      assert_equal %w[vertex fragment], camera_block["stages"]
+    end
+  end
+
   def test_glslkit_reflect_runs_standalone_without_a_full_precompile
     Dir.mktmpdir do |public_root|
       stdout, stderr, status = run_in_dummy_app("bin/rails", "glslkit:reflect", env: production_env(public_root))
@@ -53,7 +77,7 @@ class DummyAppPrecompileTest < Minitest::Test
       assert status.success?, stderr
 
       result = JSON.parse(stdout.lines.last)
-      assert_equal ["pbr"], result["programs"]
+      assert_equal %w[material pbr], result["programs"].sort
       assert result["memoized"]
     end
   end
@@ -68,7 +92,7 @@ class DummyAppPrecompileTest < Minitest::Test
     assert status.success?, stderr
 
     result = JSON.parse(stdout.lines.last)
-    assert_equal ["pbr"], result["programs"]
+    assert_equal %w[material pbr], result["programs"].sort
   end
 
   private

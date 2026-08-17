@@ -5,4 +5,5 @@ Rails.application.routes.draw do
   get "glsl_helper_test/with_csp", to: "glsl_helper_test#with_csp"
   get "glsl_helper_test/nonce_suppressed", to: "glsl_helper_test#nonce_suppressed"
   get "glsl_helper_test/escape_test", to: "glsl_helper_test#escape_test"
+  get "glsl_helper_test/material", to: "glsl_helper_test#material"
 end

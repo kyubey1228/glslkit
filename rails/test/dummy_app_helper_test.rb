@@ -31,7 +31,7 @@ class DummyAppHelperTest < Minitest::Test
     refute_nil manifest_match, "expected a glsl-manifest script tag"
     manifest = JSON.parse(manifest_match[1])
     assert_equal 1, manifest["schema_version"]
-    assert_equal ["pbr"], manifest["programs"].keys
+    assert_equal %w[material pbr], manifest["programs"].keys.sort
   end
 
   def test_nonce_is_applied_automatically_when_configured
