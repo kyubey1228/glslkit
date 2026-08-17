@@ -1,0 +1,130 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://glslkit.dev/schema/reflection-v1.json",
+  "title": "glslkit reflection manifest",
+  "description": "Build-time reflection data extracted from GLSL shader programs. This is the contract between glslkit-core (including a future ruby.wasm build) and any runtime consumer (e.g. a WebGL binding). Consumers MUST tolerate uniform/attribute locations resolving to null/-1 at runtime: unused declarations may be stripped by the GLSL compiler even though they are recorded here.",
+  "type": "object",
+  "required": ["schema_version", "generated_at", "programs"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": 1 },
+    "generated_at": { "type": "string", "format": "date-time" },
+    "programs": {
+      "type": "object",
+      "additionalProperties": { "$ref": "#/$defs/program" }
+    }
+  },
+  "$defs": {
+    "program": {
+      "type": "object",
+      "description": "A vertex+fragment shader pair, auto-derived from a matching .vert/.frag filename. Both stages are required in v0.1.",
+      "required": ["digest", "stages", "attributes", "uniforms", "uniform_blocks", "outputs"],
+      "additionalProperties": false,
+      "properties": {
+        "digest": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "SHA256 hex of \"#{vertex.digest}:#{fragment.digest}\"."
+        },
+        "stages": {
+          "type": "object",
+          "required": ["vertex", "fragment"],
+          "additionalProperties": false,
+          "properties": {
+            "vertex": { "$ref": "#/$defs/stage" },
+            "fragment": { "$ref": "#/$defs/stage" }
+          }
+        },
+        "attributes": { "type": "array", "items": { "$ref": "#/$defs/attribute" } },
+        "uniforms": { "type": "array", "items": { "$ref": "#/$defs/uniform" } },
+        "uniform_blocks": { "type": "array", "items": { "$ref": "#/$defs/uniform_block" } },
+        "outputs": { "type": "array", "items": { "$ref": "#/$defs/output" } }
+      }
+    },
+    "stage": {
+      "type": "object",
+      "required": ["path", "digest", "url"],
+      "additionalProperties": false,
+      "properties": {
+        "path": { "type": "string", "description": "Path relative to the shader load path, as passed to the preprocessor." },
+        "digest": { "type": "string", "pattern": "^[0-9a-f]{64}$", "description": "SHA256 hex of the flattened (post-#include) source for this stage." },
+        "url": { "type": "string", "description": "Asset pipeline URL for the compiled stage, if published (e.g. by Propshaft)." }
+      }
+    },
+    "stage_name": { "enum": ["vertex", "fragment"] },
+    "array_size": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "1 for non-array declarations, so consumers never need to special-case the scalar case."
+    },
+    "location": {
+      "type": ["integer", "null"],
+      "minimum": 0,
+      "description": "Explicit `layout(location = N)`, or null if unspecified (the runtime must look it up itself, e.g. via getAttribLocation). A non-null value here is not a guarantee the driver kept that location: unused declarations may be optimized away, so runtime location lookups can still fail and consumers must tolerate that."
+    },
+    "attribute": {
+      "type": "object",
+      "required": ["name", "type", "location", "array_size"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string" },
+        "type": { "type": "string" },
+        "location": { "$ref": "#/$defs/location" },
+        "array_size": { "$ref": "#/$defs/array_size" }
+      }
+    },
+    "uniform": {
+      "type": "object",
+      "description": "Uniforms sharing a name across stages are merged into a single entry; `stages` records which stages declared it. A type mismatch across stages is a build error (StageMismatchError), not represented here.",
+      "required": ["name", "type", "array_size", "setter", "matrix", "sampler", "stages"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string" },
+        "type": { "type": "string" },
+        "array_size": { "$ref": "#/$defs/array_size" },
+        "setter": { "type": "string", "description": "WebGL2 setter method name, per Glslkit::Types." },
+        "matrix": { "type": "boolean", "description": "True if `setter` is a uniformMatrix*fv variant requiring a transpose argument." },
+        "sampler": { "type": "boolean", "description": "True for sampler/image types, which are set via uniform1iv with texture unit indices." },
+        "stages": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/stage_name" },
+          "minItems": 1,
+          "uniqueItems": true
+        }
+      }
+    },
+    "uniform_block": {
+      "type": "object",
+      "required": ["name", "layout", "binding", "stages"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string" },
+        "layout": {
+          "type": "string",
+          "description": "GLSL packing layout (std140, std430, packed, shared). Defaults to \"shared\" per the GLSL spec when no layout qualifier is present in source."
+        },
+        "binding": {
+          "type": ["integer", "null"],
+          "minimum": 0,
+          "description": "Explicit `binding = N`, or null if unspecified."
+        },
+        "stages": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/stage_name" },
+          "minItems": 1,
+          "uniqueItems": true
+        }
+      }
+    },
+    "output": {
+      "type": "object",
+      "required": ["name", "type", "location"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string" },
+        "type": { "type": "string" },
+        "location": { "$ref": "#/$defs/location" }
+      }
+    }
+  }
+}
