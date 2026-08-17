@@ -1,7 +1,9 @@
 # frozen_string_literal: true
 
 require "glslkit"
+require "propshaft"
 require_relative "rails/version"
+require_relative "rails/railtie"
 
 module Glslkit
   module Rails
