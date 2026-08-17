@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "set"
+require "digest"
 require_relative "errors"
 require_relative "source"
 require_relative "source_map"
@@ -28,7 +29,12 @@ module Glslkit
       header.concat(run.extensions)
 
       code = "#{(header + run.body).join("\n")}\n"
-      Source.new(code: code, source_map: run.source_map, reflection: Reflection.new(code))
+      Source.new(
+        code: code,
+        source_map: run.source_map,
+        reflection: Reflection.new(code),
+        digest: Digest::SHA256.hexdigest(code)
+      )
     end
 
     private

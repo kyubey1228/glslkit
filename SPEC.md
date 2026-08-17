@@ -230,6 +230,10 @@ layout(location = 0) out vec4 gAlbedo;         // output (MRT)
 - `location: null` は「WebGL側で `getAttribLocation` を引く必要がある」ことを意味する。
 - 未使用uniformはGLSLコンパイラに削除され得るため、
   **wasm側は location 解決失敗を許容する必要がある**旨をスキーマのdescriptionに書いておくこと。
+- `stages.*.url` は **Propshaftが計算するフィンガープリント付きアセットパス**であり、
+  glslkitのdigest（`source.digest` やプログラム全体の `digest`）から合成するものではない。
+  両者は無関係な値なので、Manifest側は `url` を外部から渡された文字列としてそのまま格納するだけにし、
+  digestから逆算・生成しようとしないこと。
 
 ---
 

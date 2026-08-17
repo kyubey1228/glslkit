@@ -10,6 +10,7 @@ require_relative "glslkit/source_map"
 require_relative "glslkit/source"
 require_relative "glslkit/reflection"
 require_relative "glslkit/preprocessor"
+require_relative "glslkit/manifest"
 
 module Glslkit
 end
