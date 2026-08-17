@@ -12,7 +12,7 @@ Rails.application.configure do
 
   # Redirects precompile output outside the repo during tests, so running the
   # test suite never leaves generated assets committed under test/dummy/public.
-  if (public_root = ENV["GLSLKIT_TEST_PUBLIC_ROOT"])
-    config.paths["public"] = public_root
+  if ENV["GLSLKIT_TEST_PUBLIC_ROOT"].present?
+    config.paths["public"] = ENV["GLSLKIT_TEST_PUBLIC_ROOT"]
   end
 end

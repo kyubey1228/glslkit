@@ -31,6 +31,10 @@ module Glslkit
           app.config.assets.compilers << [mime_type, Glslkit::Rails::Compiler]
         end
       end
+
+      rake_tasks do
+        load File.expand_path("../../tasks/glslkit.rake", __dir__)
+      end
     end
   end
 end
