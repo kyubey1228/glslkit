@@ -4,3 +4,8 @@
 /Gemfile.lock
 *.gem
 .DS_Store
+
+# generated at runtime by the dummy Rails app used in rails/test
+/rails/test/dummy/tmp/
+/rails/test/dummy/log/
+/rails/test/dummy/public/assets/

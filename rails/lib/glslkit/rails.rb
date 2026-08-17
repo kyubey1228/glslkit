@@ -3,6 +3,7 @@
 require "glslkit"
 require "propshaft"
 require_relative "rails/version"
+require_relative "rails/compiler"
 require_relative "rails/railtie"
 
 module Glslkit

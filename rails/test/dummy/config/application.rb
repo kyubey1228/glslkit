@@ -3,6 +3,10 @@
 require_relative "boot"
 
 require "rails" # the "railties" gem's entry point; loads Rails::Application + ActionDispatch, nothing more (not rails/all)
+# Needed so ActionDispatch::Static (which Propshaft's dev-mode Server middleware
+# sits behind) can resolve ActionController::Base. Deliberately not requiring
+# active_record/railtie — no DB config needed for anything glslkit-rails does.
+require "action_controller/railtie"
 require "glslkit/rails"
 
 module Dummy
