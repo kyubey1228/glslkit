@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://glslkit.dev/schema/source-map-v1.json",
+  "title": "glslkit source map",
+  "description": "Serialized form of Glslkit::SourceMap (segment-based output-line -> (original file, original line) mapping). This is a separate contract from reflection-v1.json: it is embedded independently by consumers that need to resolve compile/link error locations back to original source files (e.g. glslkit-webgl), and is not part of the reflection manifest.",
+  "type": "object",
+  "required": ["version", "files", "segments"],
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "const": 1,
+      "description": "Stays 1 while this schema is unreleased/unpublished, since there is no compatibility to preserve yet. Bump to 2 the first time a required field is added after the schema is published."
+    },
+    "files": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Canonical paths, indexed by position. Referenced by segments[*][1] (file_index)."
+    },
+    "segments": {
+      "type": "array",
+      "description": "Each entry is [output_line, file_index, source_line], describing a half-open interval starting at output_line that maps 1:1 to source_line onward in files[file_index], until the next segment (or end of output). MUST be sorted by output_line ascending: consumers resolve via binary search and unsorted input produces incorrect (but not exception-raising) results.",
+      "items": {
+        "type": "array",
+        "prefixItems": [
+          { "type": "integer", "minimum": 1, "description": "output_line" },
+          { "type": "integer", "minimum": 0, "description": "file_index, an index into files" },
+          { "type": "integer", "minimum": 1, "description": "source_line" }
+        ],
+        "items": false,
+        "minItems": 3,
+        "maxItems": 3
+      }
+    }
+  }
+}

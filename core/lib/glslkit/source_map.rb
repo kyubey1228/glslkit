@@ -9,8 +9,26 @@ module Glslkit
   # 人間/GLSLコンパイラ向けに描画したものに過ぎず、`line_directives: false`
   # で抑止されていてもこちらは常に記録される。
   class SourceMap
+    class UnsupportedVersionError < StandardError; end
+
     Segment = Struct.new(:output_line, :file_index, :source_line)
     private_constant :Segment
+
+    # spec/schema/source-map-v1.json に対応するHashから復元する(M8g)。
+    # `segments` は `output_line` 昇順であることを前提にする(`to_h` は
+    # 常にソート済みで出力する)。ソートされていない入力を渡した場合の
+    # `resolve` の結果は未定義— 呼び出し側で保証すること。
+    def self.from_h(hash)
+      version = hash.fetch("version")
+      raise UnsupportedVersionError, "unsupported source map version: #{version.inspect}" unless version == 1
+
+      source_map = new
+      hash.fetch("files").each { |path| source_map.index_for(path) }
+      hash.fetch("segments").each do |output_line, file_index, source_line|
+        source_map.add_segment(output_line: output_line, file_index: file_index, source_line: source_line)
+      end
+      source_map
+    end
 
     def initialize
       @files = []
@@ -19,6 +37,17 @@ module Glslkit
     end
 
     attr_reader :files
+
+    # spec/schema/source-map-v1.json に対応するHashを返す。`segments` は
+    # 呼び出し順(=Preprocessorがoutput_line昇順で呼ぶ順)を信頼せず、
+    # 明示的に `output_line` 昇順にソートしてから出力する。
+    def to_h
+      {
+        "version" => 1,
+        "files" => @files,
+        "segments" => @segments.sort_by(&:output_line).map { |s| [s.output_line, s.file_index, s.source_line] }
+      }
+    end
 
     def index_for(path)
       @index_by_path[path] ||= begin
