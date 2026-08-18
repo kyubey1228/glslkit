@@ -19,6 +19,161 @@ class ValidatorTest < Minitest::Test
     Glslkit::Validator.new(**opts).validate(program)
   end
 
+  # --- E001: vertex out / fragment in type mismatch ---
+
+  def test_e001_detects_a_type_mismatch_between_vertex_out_and_fragment_in
+    vertex = <<~GLSL
+      out vec3 v_uv;
+      void main() {}
+    GLSL
+    fragment = <<~GLSL
+      in vec2 v_uv;
+      out vec4 fragColor;
+      void main() {}
+    GLSL
+
+    result = validate(build_program("p", vertex: vertex, fragment: fragment))
+
+    diagnostic = result.errors.find { |d| d.code == "E001" }
+    refute_nil diagnostic
+    assert_equal :fragment, diagnostic.stage
+    assert_includes diagnostic.message, "vec3"
+    assert_includes diagnostic.message, "vec2"
+  end
+
+  def test_e001_does_not_flag_matching_types
+    vertex = <<~GLSL
+      out vec3 v_uv;
+      void main() {}
+    GLSL
+    fragment = <<~GLSL
+      in vec3 v_uv;
+      out vec4 fragColor;
+      void main() {}
+    GLSL
+
+    result = validate(build_program("p", vertex: vertex, fragment: fragment))
+
+    assert_empty result.diagnostics.select { |d| d.code == "E001" }
+  end
+
+  # --- E002: fragment in with no matching vertex out (warning) ---
+
+  def test_e002_detects_a_fragment_in_with_no_matching_vertex_out
+    vertex = "void main() {}\n"
+    fragment = <<~GLSL
+      in vec2 v_uv;
+      out vec4 fragColor;
+      void main() {}
+    GLSL
+
+    result = validate(build_program("p", vertex: vertex, fragment: fragment))
+
+    diagnostic = result.warnings.find { |d| d.code == "E002" }
+    refute_nil diagnostic
+    assert_equal :fragment, diagnostic.stage
+    assert_includes diagnostic.message, "v_uv"
+  end
+
+  def test_e002_is_skipped_when_a_stage_is_missing
+    fragment = <<~GLSL
+      in vec2 v_uv;
+      out vec4 fragColor;
+      void main() {}
+    GLSL
+
+    result = validate(build_program("p", fragment: fragment))
+
+    assert_empty result.diagnostics.select { |d| d.code == "E002" }
+  end
+
+  # --- W001: vertex out with no matching fragment in (warning) ---
+
+  def test_w001_detects_a_vertex_out_with_no_matching_fragment_in
+    vertex = <<~GLSL
+      out vec3 v_normal;
+      void main() {}
+    GLSL
+    fragment = "out vec4 fragColor;\nvoid main() {}\n"
+
+    result = validate(build_program("p", vertex: vertex, fragment: fragment))
+
+    diagnostic = result.warnings.find { |d| d.code == "W001" }
+    refute_nil diagnostic
+    assert_equal :vertex, diagnostic.stage
+    assert_includes diagnostic.message, "v_normal"
+  end
+
+  def test_w001_is_skipped_when_a_stage_is_missing
+    vertex = <<~GLSL
+      out vec3 v_normal;
+      void main() {}
+    GLSL
+
+    result = validate(build_program("p", vertex: vertex))
+
+    assert_empty result.diagnostics.select { |d| d.code == "W001" }
+  end
+
+  # --- E003: cross-stage uniform / uniform block mismatch ---
+
+  def test_e003_detects_a_cross_stage_uniform_type_mismatch
+    vertex = "uniform mat4 u_thing;\nvoid main() {}\n"
+    fragment = "uniform vec4 u_thing;\nout vec4 fragColor;\nvoid main() {}\n"
+
+    result = validate(build_program("p", vertex: vertex, fragment: fragment))
+
+    diagnostic = result.errors.find { |d| d.code == "E003" }
+    refute_nil diagnostic
+    assert_equal :fragment, diagnostic.stage
+    assert_includes diagnostic.message, "u_thing"
+  end
+
+  def test_e003_detects_a_cross_stage_uniform_block_mismatch
+    vertex = <<~GLSL
+      layout(std140, binding = 0) uniform Camera { mat4 view; };
+      void main() {}
+    GLSL
+    fragment = <<~GLSL
+      layout(std430, binding = 1) uniform Camera { mat4 view; };
+      out vec4 fragColor;
+      void main() {}
+    GLSL
+
+    result = validate(build_program("p", vertex: vertex, fragment: fragment))
+
+    diagnostic = result.errors.find { |d| d.code == "E003" }
+    refute_nil diagnostic
+    assert_equal :fragment, diagnostic.stage
+    assert_includes diagnostic.message, "Camera"
+  end
+
+  def test_e003_does_not_flag_a_consistent_uniform_or_block
+    vertex = <<~GLSL
+      uniform mat4 u_mvp;
+      layout(std140, binding = 0) uniform Camera { mat4 view; };
+      void main() {}
+    GLSL
+    fragment = <<~GLSL
+      uniform mat4 u_mvp;
+      layout(std140, binding = 0) uniform Camera { mat4 view; };
+      out vec4 fragColor;
+      void main() {}
+    GLSL
+
+    result = validate(build_program("p", vertex: vertex, fragment: fragment))
+
+    assert_empty result.diagnostics.select { |d| d.code == "E003" }
+  end
+
+  def test_e003_is_skipped_when_a_stage_is_missing
+    fragment = "uniform vec4 u_thing;\nout vec4 fragColor;\nvoid main() {}\n"
+
+    result = validate(build_program("p", fragment: fragment))
+
+    assert_empty result.diagnostics.select { |d| d.code == "E003" }
+  end
+
   # --- E004: attribute location duplicated (vertex-only) ---
 
   def test_e004_detects_duplicate_attribute_locations
