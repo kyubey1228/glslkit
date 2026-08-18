@@ -27,6 +27,8 @@ end
 
 require_relative "webgl/errors"
 require_relative "webgl/program"
+require_relative "webgl/geometry"
+require_relative "webgl/texture"
 require_relative "webgl/context"
 
 module Glslkit
