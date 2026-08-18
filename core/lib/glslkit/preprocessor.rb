@@ -29,6 +29,15 @@ module Glslkit
       header.concat(run.extensions)
 
       code = "#{(header + run.body).join("\n")}\n"
+
+      # segmentsはbody基準(ヘッダを含まない)の行番号で溜めてあるので、
+      # ヘッダの行数だけ一括でずらしてからSourceMapに登録する。ヘッダの
+      # 行数はexpand()完了まで確定しない(#versionがどのファイルで見つかる
+      # かは走査してみないと分からない)ため、この2段階が必要になる。
+      run.segments.each do |body_line, file_index, source_line|
+        run.source_map.add_segment(output_line: header.size + body_line, file_index: file_index, source_line: source_line)
+      end
+
       Source.new(
         code: code,
         source_map: run.source_map,
@@ -42,7 +51,7 @@ module Glslkit
     # トップレベルの#process呼び出し1回分の間で共有される可変状態。
     class Run
       attr_accessor :version
-      attr_reader :source_map, :extensions, :body, :ancestor_stack
+      attr_reader :source_map, :extensions, :body, :ancestor_stack, :segments
 
       def initialize
         @source_map = SourceMap.new
@@ -51,6 +60,7 @@ module Glslkit
         @pragma_once_seen = Set.new
         @ancestor_stack = []
         @body = []
+        @segments = [] # [body_relative_output_line, file_index, source_line]
       end
 
       def pragma_once?(canonical_path)
@@ -106,6 +116,9 @@ module Glslkit
         else
           if needs_marker
             run.body << "#line #{lineno} #{file_index}" if @line_directives
+            # line_directivesの値に関わらず区間は必ず記録する(§8.1の決定事項:
+            # テキストの#lineは描画に過ぎず、位置情報の正はこちらが持つ)。
+            run.segments << [run.body.size + 1, file_index, lineno]
             needs_marker = false
           end
           run.body << line

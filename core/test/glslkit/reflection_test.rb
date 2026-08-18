@@ -157,4 +157,64 @@ class ReflectionTest < Minitest::Test
     assert_equal ["u_color"], reflection.uniforms.map(&:name)
     assert_equal ["a_uv"], reflection.attributes.map(&:name)
   end
+
+  def test_output_line_points_to_the_declaration_itself
+    code = "uniform vec3 u_a;\nuniform vec3 u_b;\n"
+
+    reflection = Glslkit::Reflection.new(code)
+
+    assert_equal [1, 2], reflection.uniforms.map(&:output_line)
+  end
+
+  def test_output_line_skips_past_a_preceding_multi_line_comment
+    code = <<~GLSL
+      /* line1
+         line2
+         line3 */
+      uniform vec3 u_color;
+    GLSL
+
+    reflection = Glslkit::Reflection.new(code)
+
+    assert_equal 4, reflection.uniforms.first.output_line
+  end
+
+  def test_output_line_skips_past_preceding_blank_lines
+    code = "\n\n\nuniform vec3 u_color;\n"
+
+    reflection = Glslkit::Reflection.new(code)
+
+    assert_equal 4, reflection.uniforms.first.output_line
+  end
+
+  def test_output_line_of_a_declaration_spanning_multiple_lines_is_its_first_line
+    code = "uniform\n  mat4\n  u_model_view;\n"
+
+    reflection = Glslkit::Reflection.new(code)
+
+    assert_equal 1, reflection.uniforms.first.output_line
+  end
+
+  def test_output_line_after_a_single_line_comment_on_its_own_line
+    code = "// a comment\nuniform vec3 u_color;\n"
+
+    reflection = Glslkit::Reflection.new(code)
+
+    assert_equal 2, reflection.uniforms.first.output_line
+  end
+
+  def test_strip_noise_preserves_the_total_line_count
+    code = <<~GLSL
+      #version 300 es
+      // a comment
+      /* a
+         multi-line
+         comment */
+      uniform vec3 u_color;
+    GLSL
+
+    stripped = Glslkit::Reflection.new(code).send(:strip_noise, code)
+
+    assert_equal code.lines.size, stripped.lines.size
+  end
 end
