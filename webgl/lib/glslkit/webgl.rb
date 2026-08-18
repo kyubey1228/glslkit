@@ -25,7 +25,20 @@ rescue LoadError => error
   require_relative "../../../core/lib/glslkit/runtime"
 end
 
+require_relative "webgl/errors"
+require_relative "webgl/program"
+require_relative "webgl/context"
+
 module Glslkit
   module WebGL
+    class << self
+      attr_accessor :debug
+
+      def context(selector)
+        Context.from_selector(selector)
+      end
+    end
+
+    self.debug = false
   end
 end
