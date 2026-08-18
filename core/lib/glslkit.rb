@@ -12,6 +12,9 @@ require_relative "glslkit/reflection"
 require_relative "glslkit/preprocessor"
 require_relative "glslkit/manifest"
 require_relative "glslkit/minifier"
+require_relative "glslkit/program"
+require_relative "glslkit/diagnostic"
+require_relative "glslkit/validator"
 
 module Glslkit
 end

@@ -12,6 +12,38 @@ module Glslkit
   # 無関係で、digestから導出することはなく、渡された値をそのまま格納する
   # だけである。
   class Manifest
+    # Glslkit::Program (§8.3) の配列からマニフェストのHashを直接組み立てる。
+    # Validatorと入力を共有できるようにする入口で、内部的には
+    # add_program に委譲するだけ(既存のマージロジックには手を入れない)。
+    #
+    # vertex/fragmentが両方揃っていないProgramは(共有partial等の可能性が
+    # あるため)黙ってスキップする — SPEC.md §2.4/§3の「プログラムは
+    # 両ステージ必須」という決定と、ManifestBuilder(rails側)が既に
+    # 行っているのと同じ扱い。
+    #
+    # 検証(Validator)は必ずこれより先に呼ぶこと(§8.6)。ここは今まで通り
+    # StageMismatchErrorを投げる経路のままなので、検証を経ていない入力を
+    # 渡すと診断を得る前に例外で落ちる。
+    def self.build(programs:, urls: {}, now: Time.now)
+      manifest = new(generated_at: now.utc.iso8601)
+      programs.each do |program|
+        next unless program.sources.key?(:vertex) && program.sources.key?(:fragment)
+
+        manifest.add_program(
+          program.name,
+          vertex: stage_input(program, :vertex, urls),
+          fragment: stage_input(program, :fragment, urls)
+        )
+      end
+      manifest.to_h
+    end
+
+    def self.stage_input(program, stage, urls)
+      ext = (stage == :vertex) ? "vert" : "frag"
+      {path: "#{program.name}.#{ext}", source: program.sources.fetch(stage), url: urls.dig(program.name, stage)}
+    end
+    private_class_method :stage_input
+
     def initialize(generated_at:)
       @generated_at = generated_at
       @programs = {}
@@ -114,6 +146,12 @@ module Glslkit
     # #nameを持つエントリの {vertex: [...], fragment: [...]} を受け取り、
     # 初出順(vertexのエントリが先、fragmentのみの名前はその後)を保った
     # name => {stage => entry} の順序付きHashを返す。
+    #
+    # 同一ステージのentries内に同名が2件以上あった場合、後のものが前のものを
+    # 静かに上書きする(`[stage] = entry`)。これは**入力がValidator(§8.3の
+    # E006)で検証済みで、同一ステージ内の重複が存在しないこと**を前提として
+    # 許容している。Validatorを経ていない入力でこのメソッドを単体利用すると、
+    # 重複が黙って握り潰されるので注意。
     def group_by_name(stage_entries)
       grouped = {}
       stage_entries.each do |stage, entries|
