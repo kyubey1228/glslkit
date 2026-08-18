@@ -9,6 +9,7 @@ and reports shader compiler errors as Ruby exceptions.
 Serve this repository over HTTP and open `webgl/sample/index.html`. The sample
 draws a rotating, textured cube without application JavaScript.
 `webgl/sample/compile-error.html` demonstrates original-file error mapping.
+`webgl/sample/neon.html` is an animated fragment-shader raymarching demo.
 
 ```html
 <canvas id="canvas" width="640" height="480"></canvas>
