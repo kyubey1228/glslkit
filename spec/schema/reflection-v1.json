@@ -7,7 +7,10 @@
   "required": ["schema_version", "generated_at", "programs"],
   "additionalProperties": false,
   "properties": {
-    "schema_version": { "const": 1 },
+    "schema_version": {
+      "const": 1,
+      "description": "Stays 1 while this schema is unreleased/unpublished, since there is no compatibility to preserve yet. Bump to 2 the first time a required field is added after the schema is published."
+    },
     "generated_at": { "type": "string", "format": "date-time" },
     "programs": {
       "type": "object",
@@ -76,7 +79,7 @@
     "uniform": {
       "type": "object",
       "description": "Uniforms sharing a name across stages are merged into a single entry; `stages` records which stages declared it. A type mismatch across stages is a build error (StageMismatchError), not represented here.",
-      "required": ["name", "type", "array_size", "setter", "matrix", "sampler", "stages"],
+      "required": ["name", "type", "array_size", "setter", "matrix", "sampler", "components", "element_count", "stages"],
       "additionalProperties": false,
       "properties": {
         "name": { "type": "string" },
@@ -85,6 +88,16 @@
         "setter": { "type": "string", "description": "WebGL2 setter method name, per Glslkit::Types." },
         "matrix": { "type": "boolean", "description": "True if `setter` is a uniformMatrix*fv variant requiring a transpose argument." },
         "sampler": { "type": "boolean", "description": "True for sampler/image types, which are set via uniform1iv with texture unit indices." },
+        "components": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Component count of a single array element (e.g. vec3 -> 3, mat4 -> 16, sampler types -> 1)."
+        },
+        "element_count": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "components * array_size. The expected length of the array passed to `setter`."
+        },
         "stages": {
           "type": "array",
           "items": { "$ref": "#/$defs/stage_name" },

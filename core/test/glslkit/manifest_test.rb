@@ -74,6 +74,33 @@ class ManifestTest < Minitest::Test
     assert_equal ["fragColor"], program["outputs"].map { |o| o["name"] }
   end
 
+  def test_uniform_entries_carry_components_and_element_count
+    program = build_manifest.to_h["programs"]["pbr"]
+    uniforms_by_name = program["uniforms"].to_h { |u| [u["name"], u] }
+
+    u_view = uniforms_by_name.fetch("u_view")
+    assert_equal 16, u_view["components"]
+    assert_equal 16, u_view["element_count"]
+
+    u_albedo = uniforms_by_name.fetch("u_albedo")
+    assert_equal 1, u_albedo["components"]
+    assert_equal 1, u_albedo["element_count"]
+  end
+
+  def test_element_count_scales_with_array_size
+    vertex_source = process("uniform vec4 u_lights[8];\nvoid main() {}\n", "a.vert")
+    fragment_source = process("out vec4 fragColor;\nvoid main() {}\n", "a.frag")
+
+    manifest = Glslkit::Manifest.new(generated_at: "2026-08-17T00:00:00Z")
+    manifest.add_program("a",
+      vertex: {path: "a.vert", source: vertex_source, url: "/assets/a.vert"},
+      fragment: {path: "a.frag", source: fragment_source, url: "/assets/a.frag"})
+
+    u_lights = manifest.to_h["programs"]["a"]["uniforms"].find { |u| u["name"] == "u_lights" }
+    assert_equal 4, u_lights["components"]
+    assert_equal 32, u_lights["element_count"]
+  end
+
   def test_type_mismatch_raises_stage_mismatch_error
     vertex_source = process("uniform mat4 u_thing;\nvoid main() {}\n", "a.vert")
     fragment_source = process("uniform vec4 u_thing;\nvoid main() {}\n", "a.frag")

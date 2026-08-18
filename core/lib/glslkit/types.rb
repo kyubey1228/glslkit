@@ -45,10 +45,31 @@ module Glslkit
       sampler2DShadow samplerCubeShadow sampler2DArrayShadow
     ].freeze
 
+    # 1要素あたりの成分数(§8.5)。setterに渡す配列の期待長(= components * array_size)の
+    # 算出に使う。
+    NON_MATRIX_COMPONENTS = {
+      "float" => 1, "int" => 1, "bool" => 1, "uint" => 1,
+      "vec2" => 2, "ivec2" => 2, "bvec2" => 2, "uvec2" => 2,
+      "vec3" => 3, "ivec3" => 3, "bvec3" => 3, "uvec3" => 3,
+      "vec4" => 4, "ivec4" => 4, "bvec4" => 4, "uvec4" => 4
+    }.freeze
+
+    # matCxR は C列R行の行列(GLSL仕様)。成分数は C * R。
+    MATRIX_COMPONENTS = {
+      "mat2" => 4, "mat3" => 9, "mat4" => 16,
+      "mat2x3" => 6, "mat2x4" => 8,
+      "mat3x2" => 6, "mat3x4" => 12,
+      "mat4x2" => 8, "mat4x3" => 12
+    }.freeze
+
     ENTRIES = {
-      **NON_MATRIX_SETTERS.transform_values { |setter| {setter: setter, matrix: false, sampler: false} },
-      **MATRIX_SETTERS.transform_values { |setter| {setter: setter, matrix: true, sampler: false} },
-      **SAMPLER_TYPES.to_h { |type| [type, {setter: "uniform1iv", matrix: false, sampler: true}] }
+      **NON_MATRIX_SETTERS.to_h { |type, setter|
+        [type, {setter: setter, matrix: false, sampler: false, components: NON_MATRIX_COMPONENTS.fetch(type)}]
+      },
+      **MATRIX_SETTERS.to_h { |type, setter|
+        [type, {setter: setter, matrix: true, sampler: false, components: MATRIX_COMPONENTS.fetch(type)}]
+      },
+      **SAMPLER_TYPES.to_h { |type| [type, {setter: "uniform1iv", matrix: false, sampler: true, components: 1}] }
     }.freeze
 
     module_function
@@ -63,6 +84,10 @@ module Glslkit
 
     def sampler?(type)
       entry_for(type)[:sampler]
+    end
+
+    def components_for(type)
+      entry_for(type)[:components]
     end
 
     def entry_for(type)

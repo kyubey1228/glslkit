@@ -52,6 +52,20 @@ class ReflectionSchemaTest < Minitest::Test
     refute_valid manifest
   end
 
+  def test_uniform_missing_components_fails
+    manifest = valid_manifest
+    manifest["programs"]["pbr"]["uniforms"][0].delete("components")
+
+    refute_valid manifest
+  end
+
+  def test_uniform_missing_element_count_fails
+    manifest = valid_manifest
+    manifest["programs"]["pbr"]["uniforms"][0].delete("element_count")
+
+    refute_valid manifest
+  end
+
   def test_array_size_below_one_fails
     manifest = valid_manifest
     manifest["programs"]["pbr"]["uniforms"][2]["array_size"] = 0
@@ -95,11 +109,14 @@ class ReflectionSchemaTest < Minitest::Test
           ],
           uniforms: [
             {name: "u_model_view", type: "mat4", array_size: 1,
-             setter: "uniformMatrix4fv", matrix: true, sampler: false, stages: ["vertex"]},
+             setter: "uniformMatrix4fv", matrix: true, sampler: false,
+             components: 16, element_count: 16, stages: ["vertex"]},
             {name: "u_albedo", type: "sampler2D", array_size: 1,
-             setter: "uniform1iv", matrix: false, sampler: true, stages: ["fragment"]},
+             setter: "uniform1iv", matrix: false, sampler: true,
+             components: 1, element_count: 1, stages: ["fragment"]},
             {name: "u_lights", type: "vec4", array_size: 8,
-             setter: "uniform4fv", matrix: false, sampler: false, stages: ["fragment"]}
+             setter: "uniform4fv", matrix: false, sampler: false,
+             components: 4, element_count: 32, stages: ["fragment"]}
           ],
           uniform_blocks: [
             {name: "Camera", layout: "std140", binding: 0, stages: ["vertex", "fragment"]}

@@ -3,6 +3,7 @@
 require "json"
 require "digest"
 require_relative "errors"
+require_relative "types"
 
 module Glslkit
   # プログラムごとのvertex+fragment Sourceペアから reflection-v1.json の
@@ -113,6 +114,7 @@ module Glslkit
               "but #{entry.type.inspect} in #{stage}"
         end
 
+        components = Types.components_for(first_entry.type)
         {
           "name" => name,
           "type" => first_entry.type,
@@ -120,6 +122,8 @@ module Glslkit
           "setter" => first_entry.setter,
           "matrix" => first_entry.matrix,
           "sampler" => first_entry.sampler,
+          "components" => components,
+          "element_count" => components * first_entry.array_size,
           "stages" => by_stage.keys.map(&:to_s)
         }
       end
