@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>glslkit-webgl neon portal</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; display: grid; place-items: center; overflow: hidden;
+           background: radial-gradient(circle at 50% 35%, #17112d, #05060c 65%); }
+    canvas { width: min(92vw, 900px); height: min(92vh, 900px); border-radius: 18px;
+             box-shadow: 0 0 80px #753cff33, inset 0 0 0 1px #ffffff18; }
+    aside { position: fixed; left: 24px; bottom: 20px; color: #dcd7ff;
+            font: 500 13px/1.5 system-ui, sans-serif; letter-spacing: .08em; opacity: .7; }
+  </style>
+</head>
+<body>
+  <canvas id="canvas" width="900" height="900"></canvas>
+  <aside>GLSLKIT · RUBY.WASM · WEBGL2</aside>
+  <script src="../shim/glslkit-webgl.js" data-entry="./neon.rb"></script>
+</body>
+</html>
