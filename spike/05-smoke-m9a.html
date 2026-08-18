@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>glslkit-webgl M9a smoke test</title>
+<style>
+  body { font-family: system-ui, sans-serif; margin: 24px; max-width: 900px; }
+  pre { background: #f5f5f5; padding: 12px; border-radius: 6px;
+        white-space: pre-wrap; font-size: 13px; line-height: 1.6; }
+  .note { color: #666; font-size: 13px; }
+</style>
+</head>
+<body>
+
+<h1>glslkit-webgl M9a smoke test</h1>
+
+<p class="note">
+決定4の2項目を検証する。シムは書かない（このHTMLにJSロジックを足さない）。<br>
+結果は下のログと DevTools Console の両方に出る。
+</p>
+
+<pre id="out">起動中...
+</pre>
+
+<canvas id="c" width="64" height="64" style="border:1px solid #ccc"></canvas>
+
+<!-- ruby.wasm CDN。404 の場合は @ruby/3.4-wasm-wasi@2.10.1 に差し替える -->
+<script src="https://cdn.jsdelivr.net/npm/@ruby/4.0-wasm-wasi@2.10.1/dist/browser.script.iife.js"></script>
+
+<script type="text/ruby">
+require "js"
+
+OUT = JS.global[:document].call(:getElementById, "out")
+OUT[:textContent] = ""
+
+def log(s)
+  OUT[:textContent] = "#{OUT[:textContent]}#{s}\n"
+  puts s
+end
+
+def try(label)
+  yield
+rescue => e
+  log "[#{label}] FAIL  #{e.class}: #{e.message}"
+  nil
+end
+
+log "ruby #{RUBY_VERSION}  (#{RUBY_PLATFORM})"
+log ""
+
+# ---------------------------------------------------------------
+# 検証1: Float32Array がシムなしで使えるか
+# ---------------------------------------------------------------
+log "--- 1. Float32Array (シムなし) ---"
+
+try("1a") do
+  ctor = JS.global[:Float32Array]
+  log "[1a] OK    JS.global[:Float32Array] = #{ctor.typeof}"
+end
+
+try("1b") do
+  buf = JS.global[:Float32Array].new(4)
+  buf[0] = 1.5
+  buf[3] = -2.25
+  log "[1b] OK    new(4) length=#{buf[:length].to_i} " \
+      "[0]=#{buf[0].to_f} [3]=#{buf[3].to_f}"
+end
+
+# R5 で採用した転送方式が実際に通るか
+try("1c") do
+  src = [1.0, 2.0, 3.0, 4.0, 5.0]
+  buf = JS.global[:Float32Array].call(:from, src.to_js)
+  log "[1c] OK    Array#to_js -> Float32Array.from " \
+      "length=#{buf[:length].to_i} [4]=#{buf[4].to_f}"
+end
+
+# Uint16Array（インデックスバッファ用）も一応
+try("1d") do
+  buf = JS.global[:Uint16Array].call(:from, [0, 1, 2].to_js)
+  log "[1d] OK    Uint16Array.from length=#{buf[:length].to_i}"
+end
+
+log ""
+
+# ---------------------------------------------------------------
+# 検証2: requestAnimationFrame に Ruby の Proc を直接渡せるか
+# ---------------------------------------------------------------
+log "--- 2. requestAnimationFrame + Proc ---"
+
+# 2a: 明示呼び出し（R1 準拠）で1回だけ
+try("2a") do
+  one_shot = proc do |ts|
+    log "[2a] OK    call(:requestAnimationFrame, proc) が発火 " \
+        "ts=#{ts.class} -> #{ts.to_f.round(2)}"
+    start_loop
+  end
+  JS.global.call(:requestAnimationFrame, one_shot)
+  log "[2a] ...    登録した。発火待ち"
+end
+
+# 2b: shorthand でも発火するか（比較のため。実装では使わない）
+try("2b") do
+  JS.global.requestAnimationFrame(proc { |_ts|
+    log "[2b] OK    shorthand でも発火"
+  })
+  log "[2b] ...    登録した。発火待ち"
+end
+
+# ---------------------------------------------------------------
+# 検証3: 継続的な rAF ループが回るか（1秒間 / 自己再登録）
+# ---------------------------------------------------------------
+def start_loop
+  log ""
+  log "--- 3. rAF 自己再登録ループ (1秒) ---"
+
+  frames = 0
+  t0 = nil
+  tick = nil
+
+  tick = proc do |ts|
+    now = ts.to_f
+    t0 ||= now
+    frames += 1
+
+    if now - t0 >= 1000.0
+      elapsed = now - t0
+      fps = frames * 1000.0 / elapsed
+      log "[3]  OK    #{frames} frames / #{elapsed.round(1)} ms = #{fps.round(2)} fps"
+      log ""
+      log "=== 全検証終了。上の [1x] [2x] [3] を報告 ==="
+    else
+      JS.global.call(:requestAnimationFrame, tick)
+    end
+  end
+
+  JS.global.call(:requestAnimationFrame, tick)
+rescue => e
+  log "[3]  FAIL  #{e.class}: #{e.message}"
+end
+</script>
+
+</body>
+</html>

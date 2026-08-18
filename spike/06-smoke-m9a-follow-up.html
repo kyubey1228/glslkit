@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>glslkit-webgl M9a follow-up smoke test</title>
+<style>
+  body { font-family: system-ui, sans-serif; margin: 24px; max-width: 900px; }
+  pre { background: #f5f5f5; padding: 12px; border-radius: 6px;
+        white-space: pre-wrap; font-size: 13px; line-height: 1.6; }
+  .note { color: #666; font-size: 13px; }
+</style>
+</head>
+<body>
+
+<h1>glslkit-webgl M9a follow-up smoke test</h1>
+
+<p class="note">
+#1 で <code>[2a]</code> が落ちて <code>[3]</code> に到達しなかったため、<br>
+(A) JS数値の取り出しイディオムの特定 と (B) rAFループ単体 に分けて検証する。<br>
+A は ts に触らずに済むイディオムを探すのが目的。B は A の結果に依存しない。
+</p>
+
+<pre id="out">起動中...
+</pre>
+
+<script src="https://cdn.jsdelivr.net/npm/@ruby/4.0-wasm-wasi@2.10.1/dist/browser.script.iife.js"></script>
+
+<script type="text/ruby">
+require "js"
+
+OUT = JS.global[:document].call(:getElementById, "out")
+OUT[:textContent] = ""
+
+def log(s)
+  OUT[:textContent] = "#{OUT[:textContent]}#{s}\n"
+  puts s
+end
+
+def probe(label)
+  v = yield
+  log "  #{label.to_s.ljust(22)} OK    #{v}"
+rescue => e
+  log "  #{label.to_s.ljust(22)} FAIL  #{e.class}: #{e.message.to_s.lines.first.to_s.strip}"
+end
+
+log "ruby #{RUBY_VERSION}"
+log ""
+
+# ===============================================================
+# A. JS数値の取り出しイディオム
+# ===============================================================
+log "=== A. JS数値の取り出し ==="
+log ""
+
+log "A-1. performance.now() の戻り値 (スパイクで動いていた経路)"
+num = JS.global[:performance].call(:now)
+probe("ruby class")    { num.class }
+probe("typeof")        { num.typeof }
+probe(".to_s")         { num.to_s }
+probe(".to_s.to_f")    { num.to_s.to_f }
+probe(".to_f")         { num.to_f }
+probe(".to_i")         { num.to_i }
+probe("Float(to_s)")   { Float(num.to_s) }
+probe(".inspect")      { num.inspect }
+log ""
+
+log "A-2. Float32Array の要素 (数値取り出しの別経路)"
+buf = JS.global[:Float32Array].call(:from, [3.5, 7.25].to_js)
+probe("elem class")    { buf[0].class }
+probe("elem .to_s")    { buf[0].to_s }
+probe("elem .to_f")    { buf[0].to_f }
+probe("elem .to_s.to_f") { buf[1].to_s.to_f }
+log ""
+
+log "A-3. rAF のタイムスタンプ (#1 で落ちた箇所)"
+log "    → 発火後に出力される。B と並行して待つ"
+log ""
+
+ts_probe = proc do |ts|
+  log "A-3 結果:"
+  probe("ts ruby class")   { ts.class }
+  probe("ts is JS::Object?") { ts.is_a?(JS::Object) }
+  probe("ts .to_s")        { ts.to_s }
+  probe("ts .to_s.to_f")   { ts.to_s.to_f }
+  probe("ts .to_f")        { ts.to_f }
+  probe("ts .to_i")        { ts.to_i }
+  probe("ts typeof")       { ts.typeof }
+  log ""
+  log "=== 全検証終了。A-1/A-2/A-3 と B の行を報告 ==="
+end
+
+# ===============================================================
+# B. rAF 自己再登録ループ (ts に一切触らない)
+# ===============================================================
+# 経過時間は Ruby 側の Time で測る。ts を使わないことで
+# A の結果に依存せずループ自体の可否を判定する。
+log "=== B. rAF 自己再登録ループ (ts 非依存 / 60フレーム) ==="
+
+$b_frames = 0
+$b_start = nil
+$b_tick = nil
+
+$b_tick = proc do
+  $b_start ||= Time.now
+  $b_frames += 1
+
+  if $b_frames >= 60
+    elapsed = Time.now - $b_start
+    fps = $b_frames / elapsed
+    log "  B  OK    #{$b_frames} frames / #{(elapsed * 1000).round(1)} ms = #{fps.round(2)} fps"
+    log ""
+    # B が通ってから A-3 を発火させる（ログの混在を避ける）
+    JS.global.call(:requestAnimationFrame, ts_probe)
+  else
+    JS.global.call(:requestAnimationFrame, $b_tick)
+  end
+end
+
+begin
+  JS.global.call(:requestAnimationFrame, $b_tick)
+  log "  B  ...   登録した。60フレーム待ち"
+rescue => e
+  log "  B  FAIL  #{e.class}: #{e.message}"
+  log ""
+  log "→ rAF の Proc 直渡しが不可。シムに rAF ループを置く判断になる"
+end
+</script>
+
+</body>
+</html>

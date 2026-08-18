@@ -17,7 +17,12 @@ Rake::TestTask.new(:test_schema) do |t|
   t.test_files = FileList["test/**/*_test.rb"]
 end
 
-desc "Run all tests (core + rails + schema)"
-task test: [:test_core, :test_rails, :test_schema]
+Rake::TestTask.new(:test_webgl) do |t|
+  t.libs << "core/lib" << "webgl/lib" << "webgl/test/support" << "webgl/test"
+  t.test_files = FileList["webgl/test/**/*_test.rb"]
+end
+
+desc "Run all tests (core + rails + schema + webgl)"
+task test: [:test_core, :test_rails, :test_schema, :test_webgl]
 
 task default: :test
