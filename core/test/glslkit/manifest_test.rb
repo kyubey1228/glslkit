@@ -135,4 +135,25 @@ class ManifestTest < Minitest::Test
     assert_equal first["stages"]["vertex"]["digest"], second["stages"]["vertex"]["digest"]
     assert_equal first["stages"]["fragment"]["digest"], second["stages"]["fragment"]["digest"]
   end
+
+  def test_parse_round_trips_with_to_json
+    original = build_manifest
+    parsed = Glslkit::Manifest.parse(original.to_json)
+
+    assert_equal original.to_h, parsed.to_h
+  end
+
+  def test_parse_accepts_an_already_parsed_hash
+    original = build_manifest
+    parsed = Glslkit::Manifest.parse(JSON.parse(original.to_json))
+
+    assert_equal original.to_h, parsed.to_h
+  end
+
+  def test_parse_rejects_an_unsupported_schema_version
+    hash = build_manifest.to_h
+    hash["schema_version"] = 2
+
+    assert_raises(Glslkit::Manifest::UnsupportedVersionError) { Glslkit::Manifest.parse(hash) }
+  end
 end

@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require "set"
-require "digest"
+require_relative "digest"
 require_relative "errors"
 require_relative "source"
 require_relative "source_map"
@@ -42,7 +42,7 @@ module Glslkit
         code: code,
         source_map: run.source_map,
         reflection: Reflection.new(code),
-        digest: Digest::SHA256.hexdigest(code)
+        digest: Digest.hexdigest(code)
       )
     end
 

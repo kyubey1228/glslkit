@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 require "json"
-require "digest"
 require_relative "errors"
 require_relative "types"
 
@@ -13,6 +12,20 @@ module Glslkit
   # 無関係で、digestから導出することはなく、渡された値をそのまま格納する
   # だけである。
   class Manifest
+    class UnsupportedVersionError < StandardError; end
+
+    # JSON文字列(またはJSON.parse済みのHash)からManifestを復元する(M8g)。
+    # `glslkit/runtime`(digestをロードしない狭い入口)から使われる想定のため、
+    # ここではdigestに一切触れない。検証は行わない — 壊れた入力は
+    # KeyError/JSON::ParserError等をそのまま投げる。
+    def self.parse(json_string_or_hash)
+      hash = json_string_or_hash.is_a?(String) ? JSON.parse(json_string_or_hash) : json_string_or_hash
+      version = hash.fetch("schema_version")
+      raise UnsupportedVersionError, "unsupported schema_version: #{version.inspect}" unless version == 1
+
+      new(generated_at: hash.fetch("generated_at"), programs: hash.fetch("programs"))
+    end
+
     # Glslkit::Program (§8.3) の配列からマニフェストのHashを直接組み立てる。
     # Validatorと入力を共有できるようにする入口で、内部的には
     # add_program に委譲するだけ(既存のマージロジックには手を入れない)。
@@ -45,9 +58,9 @@ module Glslkit
     end
     private_class_method :stage_input
 
-    def initialize(generated_at:)
+    def initialize(generated_at:, programs: {})
       @generated_at = generated_at
-      @programs = {}
+      @programs = programs
     end
 
     def add_program(name, vertex:, fragment:)
@@ -86,8 +99,12 @@ module Glslkit
       }
     end
 
+    # digestをrequireするのは実際にdigestを計算する経路(build/add_program)
+    # だけにするため、ここで遅延require する(M8g)。`glslkit/runtime` 経由で
+    # `parse`/`to_h` だけを使う限りこのメソッドは呼ばれず、digestはロードされない。
     def program_digest(vertex_digest, fragment_digest)
-      Digest::SHA256.hexdigest("#{vertex_digest}:#{fragment_digest}")
+      require_relative "digest"
+      Digest.hexdigest("#{vertex_digest}:#{fragment_digest}")
     end
 
     def stage_hash(stage)
