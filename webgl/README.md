@@ -8,8 +8,12 @@ and reports shader compiler errors as Ruby exceptions.
 
 Serve this repository over HTTP and open `webgl/sample/index.html`. The sample
 draws a rotating, textured cube without application JavaScript.
-`webgl/sample/compile-error.html` demonstrates original-file error mapping.
-`webgl/sample/neon.html` is an animated fragment-shader raymarching demo.
+`webgl/sample/neon.html` is an animated fragment-shader raymarching demo, built
+from `webgl/sample/shaders/*` via `rake glslkit:embed`.
+`webgl/sample/neon-error.html` intentionally breaks `common/sdf.glsl` (an
+`#include`d file, not the top-level shader) to demonstrate that `CompileError`
+reports the original included file and line, with a button to switch back to
+the working shaders and start rendering.
 
 ```html
 <canvas id="canvas" width="640" height="480"></canvas>
