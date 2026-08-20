@@ -2,6 +2,11 @@
 
 # 自動生成 (rake glslkit:embed)。手で編集しない。
 # 再生成するには: bundle exec rake glslkit:embed[shaders_dir,out_dir]
+#
+# MANIFESTのgenerated_atが1970-01-01なのはバグではない。生成の
+# 冪等性(同じ入力から同じ出力になること)のための固定値であり、
+# 実行時刻を使うと同じ入力でも実行のたびにgit diffが出てしまう。
+# 再現性はstages.*.digest(実データから計算される)が担保している。
 
 module HelloShaders
   VERTEX = <<'GLSLKIT_VERTEX_SRC'.freeze
