@@ -91,8 +91,13 @@ module Glslkit
         RUBY
       end
 
+      # 非squiggly(`<<~`ではなく`<<`)のシングルクォートヒアドキュメントを使う。
+      # `<<~`は最小共通インデントを削るため、code側の行のインデントが
+      # 想定と揃っていないとsource.codeとバイト一致しなくなる
+      # (例: 全行が2スペース下がっているとsource.codeの2スペースが
+      # 削られてしまう)。`<<`は一切ディデントしないため常にバイト一致する。
       def heredoc_literal(code, tag, suffix: "")
-        "<<~'#{tag}'#{suffix}\n#{code.chomp}\n#{tag}"
+        "<<'#{tag}'#{suffix}\n#{code.chomp}\n#{tag}"
       end
 
       # codeの中に偶然tagと同じ行が現れても壊れないよう、衝突する限りtagをずらす。

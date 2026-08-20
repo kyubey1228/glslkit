@@ -4,7 +4,7 @@
 # 再生成するには: bundle exec rake glslkit:embed[shaders_dir,out_dir]
 
 module HelloShaders
-  VERTEX = <<~'GLSLKIT_VERTEX_SRC'.freeze
+  VERTEX = <<'GLSLKIT_VERTEX_SRC'.freeze
 #version 300 es
 layout(location = 0) in vec2 a_position;
 uniform mat4 u_transform;
@@ -13,7 +13,7 @@ void main() {
 }
 GLSLKIT_VERTEX_SRC
 
-  FRAGMENT = <<~'GLSLKIT_FRAGMENT_SRC'.freeze
+  FRAGMENT = <<'GLSLKIT_FRAGMENT_SRC'.freeze
 #version 300 es
 precision highp float;
 

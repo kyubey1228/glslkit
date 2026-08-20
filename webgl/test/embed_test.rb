@@ -5,6 +5,7 @@ require "tmpdir"
 require "json"
 require "json_schemer"
 require "glslkit/webgl/embed"
+require "glslkit/digest"
 
 # Glslkit::WebGL::Embed はホスト側の生成ツールであり、ブラウザ/ruby.wasmの
 # シミュレーションを一切必要としない。他のwebglテストと違いFakeGL/JSは使わない。
@@ -19,6 +20,35 @@ class EmbedTest < Minitest::Test
       Glslkit::WebGL::Embed.generate(shaders_dir: FIXTURES, out_dir: out_dir)
       generated = File.read(File.join(out_dir, "hello_shaders.rb"))
       assert_equal File.read(GOLDEN), generated
+    end
+  end
+
+  # 修正1: heredoc_literal自体が、行のインデントに関わらずバイト一致で
+  # 往復することを直接確認する。hello.vert/hello.fragはどの行も桁0から
+  # 始まるため、`<<~`(squiggly)の不具合(共通インデントを勝手に削る)を
+  # 再現しない。ここでは全行が2スペース下がっている合成データで確認する。
+  def test_heredoc_literal_round_trips_byte_exact_with_uniformly_indented_code
+    code = "  #version 300 es\n  layout(location = 0) in vec2 a;\n  void main() {\n    gl_Position = vec4(a, 0.0, 1.0);\n  }\n"
+
+    literal = Glslkit::WebGL::Embed.heredoc_literal(code, "REGRESSION_TAG", suffix: ".freeze")
+    restored = eval(literal)
+
+    assert_equal code, restored
+  end
+
+  # 修正1: 埋め込んだVERTEX/FRAGMENT文字列がsource.codeとバイト一致している
+  # ことを、冪等性テストとは別に確認する。`<<~`(squiggly)は最小共通インデント
+  # を削るため、インデントが揃っていないcodeに対してはsource.codeと一致しない
+  # 埋め込みを作りうる。digest一致はその代理検証になる
+  # (digestはsource.codeそのものから計算されているため)。
+  def test_embedded_source_digest_matches_the_manifest_stage_digest
+    Dir.mktmpdir do |out_dir|
+      Glslkit::WebGL::Embed.generate(shaders_dir: FIXTURES, out_dir: out_dir)
+      load File.join(out_dir, "hello_shaders.rb")
+
+      stages = HelloShaders::MANIFEST.fetch("programs").fetch("hello").fetch("stages")
+      assert_equal stages.dig("vertex", "digest"), Glslkit::Digest.hexdigest(HelloShaders::VERTEX)
+      assert_equal stages.dig("fragment", "digest"), Glslkit::Digest.hexdigest(HelloShaders::FRAGMENT)
     end
   end
 
