@@ -117,8 +117,14 @@ module Glslkit
           @uniform_setters[index] = setter
           @uniform_matrix[index] = uniform.fetch("matrix")
           @uniform_lengths[index] = uniform.fetch("element_count")
-          constructor = setter.to_s.end_with?("uiv") ? uint32 :
-            (setter.to_s.end_with?("iv") ? int32 : float32)
+          constructor =
+            if setter.to_s.end_with?("uiv")
+              uint32
+            elsif setter.to_s.end_with?("iv")
+              int32
+            else
+              float32
+            end
           @uniform_buffers[index] = constructor.new(@uniform_lengths[index])
         end
       end
@@ -143,7 +149,7 @@ module Glslkit
         actual ||= value.length
         unless actual == expected
           raise UniformLengthError,
-            "uniform #{name} expects #{expected} elements, got #{actual} from #{value.to_s}"
+            "uniform #{name} expects #{expected} elements, got #{actual} from #{value}"
         end
         expected.times { |i| buffer[i] = value[i] }
       end

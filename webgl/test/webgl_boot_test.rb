@@ -10,7 +10,7 @@ class WebglBootTest < Minitest::Test
   CORE_LIB = File.join(ROOT, "core", "lib")
 
   def test_normal_cruby_reports_that_ruby_wasm_is_required
-    env = { "RUBYLIB" => [WEBGL_LIB, CORE_LIB].join(File::PATH_SEPARATOR) }
+    env = {"RUBYLIB" => [WEBGL_LIB, CORE_LIB].join(File::PATH_SEPARATOR)}
     _stdout, stderr, status = Open3.capture3(
       env,
       RbConfig.ruby,

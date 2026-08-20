@@ -60,8 +60,10 @@ INDICES = [
   0, 4, 5, 0, 5, 1, 3, 2, 6, 3, 6, 7,
   1, 5, 6, 1, 6, 2, 0, 3, 7, 0, 7, 4
 ].freeze
-PIXELS = [255, 80, 120, 255, 40, 210, 255, 255,
-          40, 210, 255, 255, 255, 80, 120, 255].freeze
+PIXELS = [
+  255, 80, 120, 255, 40, 210, 255, 255,
+  40, 210, 255, 255, 255, 80, 120, 255
+].freeze
 
 ctx = Glslkit::WebGL.context("#canvas")
 program = ctx.program(Glslkit::Manifest.parse(MANIFEST), "cube",
