@@ -1,0 +1,95 @@
+# frozen_string_literal: true
+
+require "minitest/autorun"
+require "tmpdir"
+require "json"
+require "json_schemer"
+require "glslkit/webgl/embed"
+
+# Glslkit::WebGL::Embed はホスト側の生成ツールであり、ブラウザ/ruby.wasmの
+# シミュレーションを一切必要としない。他のwebglテストと違いFakeGL/JSは使わない。
+class EmbedTest < Minitest::Test
+  FIXTURES = File.expand_path("fixtures/shaders", __dir__)
+  GOLDEN = File.expand_path("fixtures/generated/hello_shaders.rb", __dir__)
+  REFLECTION_SCHEMA = File.expand_path("../../spec/schema/reflection-v1.json", __dir__)
+  SOURCE_MAP_SCHEMA = File.expand_path("../../spec/schema/source-map-v1.json", __dir__)
+
+  def test_generated_output_matches_the_golden_file
+    Dir.mktmpdir do |out_dir|
+      Glslkit::WebGL::Embed.generate(shaders_dir: FIXTURES, out_dir: out_dir)
+      generated = File.read(File.join(out_dir, "hello_shaders.rb"))
+      assert_equal File.read(GOLDEN), generated
+    end
+  end
+
+  def test_generation_is_idempotent
+    Dir.mktmpdir do |out_dir_a|
+      Dir.mktmpdir do |out_dir_b|
+        Glslkit::WebGL::Embed.generate(shaders_dir: FIXTURES, out_dir: out_dir_a)
+        Glslkit::WebGL::Embed.generate(shaders_dir: FIXTURES, out_dir: out_dir_b)
+
+        assert_equal(
+          File.read(File.join(out_dir_a, "hello_shaders.rb")),
+          File.read(File.join(out_dir_b, "hello_shaders.rb"))
+        )
+      end
+    end
+  end
+
+  def test_generated_constants_round_trip_and_match_the_schemas
+    Dir.mktmpdir do |out_dir|
+      Glslkit::WebGL::Embed.generate(shaders_dir: FIXTURES, out_dir: out_dir)
+      load File.join(out_dir, "hello_shaders.rb")
+
+      manifest = Glslkit::Manifest.parse(HelloShaders::MANIFEST)
+      assert_equal HelloShaders::MANIFEST, manifest.to_h
+
+      vertex_map = Glslkit::SourceMap.from_h(HelloShaders::SOURCE_MAPS.fetch(:vertex))
+      fragment_map = Glslkit::SourceMap.from_h(HelloShaders::SOURCE_MAPS.fetch(:fragment))
+      assert_equal ["hello.vert", 2], vertex_map.resolve(2)
+      # #include先(common/tint.glsl)の行を指すことを確認する。M10bの
+      # #pragma once実演にも関わる、埋め込み後もSourceMapが機能する証拠。
+      assert_equal ["common/tint.glsl", 2], fragment_map.resolve(3)
+
+      reflection_schema = JSONSchemer.schema(JSON.parse(File.read(REFLECTION_SCHEMA)))
+      manifest_doc = JSON.parse(JSON.generate(HelloShaders::MANIFEST))
+      assert reflection_schema.valid?(manifest_doc), reflection_schema.validate(manifest_doc).to_a.inspect
+
+      source_map_schema = JSONSchemer.schema(JSON.parse(File.read(SOURCE_MAP_SCHEMA)))
+      [:vertex, :fragment].each do |stage|
+        doc = JSON.parse(JSON.generate(HelloShaders::SOURCE_MAPS.fetch(stage)))
+        assert source_map_schema.valid?(doc), source_map_schema.validate(doc).to_a.inspect
+      end
+    end
+  end
+
+  def test_validation_failure_raises_before_writing_anything
+    Dir.mktmpdir do |shaders_dir|
+      File.write(File.join(shaders_dir, "broken.vert"), <<~GLSL)
+        layout(location = 0) in vec3 a;
+        layout(location = 0) in vec3 b;
+        void main() {}
+      GLSL
+      File.write(File.join(shaders_dir, "broken.frag"), "out vec4 c;\nvoid main() {}\n")
+
+      Dir.mktmpdir do |out_dir|
+        error = assert_raises(Glslkit::WebGL::Embed::ValidationError) do
+          Glslkit::WebGL::Embed.generate(shaders_dir: shaders_dir, out_dir: out_dir)
+        end
+        assert_match(/E004/, error.message)
+        assert_empty Dir.glob(File.join(out_dir, "*.rb"))
+      end
+    end
+  end
+
+  def test_vert_without_a_matching_frag_is_skipped
+    Dir.mktmpdir do |shaders_dir|
+      File.write(File.join(shaders_dir, "partial.vert"), "void main() {}\n")
+
+      Dir.mktmpdir do |out_dir|
+        results = Glslkit::WebGL::Embed.generate(shaders_dir: shaders_dir, out_dir: out_dir)
+        assert_empty results
+      end
+    end
+  end
+end

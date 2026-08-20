@@ -1,0 +1,119 @@
+# frozen_string_literal: true
+
+# 開発機(通常のCRuby)で実行するホスト側の生成ツール(M10a)。
+# File/Dir、Preprocessor/Reflection/Validator/digestなどcoreのフル機能を使う。
+# **`glslkit/webgl`(ブラウザ側ランタイムの入口)からは絶対にrequireしないこと。
+# ruby.wasm上では実行しない。** `rake glslkit:embed` からのみ使う想定。
+require "glslkit"
+require "pp"
+require "fileutils"
+require "time"
+
+module Glslkit
+  module WebGL
+    module Embed
+      # 冪等性のための固定値(実際の生成時刻ではない)。generated_atが実行の
+      # たびに変わるとgit diffがノイズになるため、実時刻の代わりにこれを使う。
+      EMBEDDED_TIMESTAMP = Time.at(0).utc
+
+      class ValidationError < StandardError; end
+
+      module_function
+
+      # shaders_dir配下の.vert/.fragペアごとに1つの.rbファイルをout_dirへ書き出す。
+      # 戻り値は [{name:, path:, warnings: [Glslkit::Diagnostic]}, ...]。
+      # Validatorでエラーがあれば書き出さず ValidationError を投げる
+      # (SPEC.md §8.6: Validator#validate は必ず Manifest.build より前)。
+      def generate(shaders_dir:, out_dir:)
+        root = File.expand_path(shaders_dir)
+        FileUtils.mkdir_p(out_dir)
+        preprocessor = Glslkit::Preprocessor.new(
+          resolver: Glslkit::Resolvers::FileSystem.new(load_paths: [root]),
+          line_directives: false
+        )
+
+        program_stage_paths(root).sort.map do |name, stages|
+          write_program(preprocessor, name, stages, out_dir)
+        end
+      end
+
+      def write_program(preprocessor, name, stages, out_dir)
+        vertex = preprocessor.process(stages.fetch(:vertex))
+        fragment = preprocessor.process(stages.fetch(:fragment))
+        program = Glslkit::Program.new(name: name, sources: {vertex: vertex, fragment: fragment})
+
+        result = Glslkit::Validator.new.validate(program)
+        unless result.ok?
+          raise ValidationError, "glslkit:embed validation failed for #{name}:\n#{result.errors.join("\n")}"
+        end
+
+        manifest = Glslkit::Manifest.build(programs: [program], urls: {name => stages}, now: EMBEDDED_TIMESTAMP)
+        out_path = File.join(out_dir, "#{name}_shaders.rb")
+        File.write(out_path, render(name: name, manifest: manifest, vertex: vertex, fragment: fragment))
+        {name: name, path: out_path, warnings: result.warnings}
+      end
+
+      # {"hello" => {vertex: "hello.vert", fragment: "hello.frag"}, ...} を返す。
+      # 同名の相方が無い.vert/.fragはスキップする(rails側のManifestBuilderと同じ扱い)。
+      def program_stage_paths(root)
+        by_name = Hash.new { |h, k| h[k] = {} }
+        Dir.glob("**/*.{vert,frag}", base: root).each do |relative|
+          ext = File.extname(relative)
+          stage = (ext == ".vert") ? :vertex : :fragment
+          by_name[relative.delete_suffix(ext)][stage] = relative
+        end
+        by_name.select { |_, stages| stages.key?(:vertex) && stages.key?(:fragment) }
+      end
+
+      def render(name:, manifest:, vertex:, fragment:)
+        module_name = "#{camelize(name)}Shaders"
+        vertex_tag = unique_tag(vertex.code, "GLSLKIT_VERTEX_SRC")
+        fragment_tag = unique_tag(fragment.code, "GLSLKIT_FRAGMENT_SRC")
+
+        <<~RUBY
+          # frozen_string_literal: true
+
+          # 自動生成 (rake glslkit:embed)。手で編集しない。
+          # 再生成するには: bundle exec rake glslkit:embed[shaders_dir,out_dir]
+
+          module #{module_name}
+            VERTEX = #{heredoc_literal(vertex.code, vertex_tag, suffix: ".freeze")}
+
+            FRAGMENT = #{heredoc_literal(fragment.code, fragment_tag, suffix: ".freeze")}
+
+            MANIFEST = #{pp_literal(manifest)}.freeze
+
+            SOURCE_MAPS = {
+              vertex: #{pp_literal(vertex.source_map.to_h)},
+              fragment: #{pp_literal(fragment.source_map.to_h)}
+            }.freeze
+          end
+        RUBY
+      end
+
+      def heredoc_literal(code, tag, suffix: "")
+        "<<~'#{tag}'#{suffix}\n#{code.chomp}\n#{tag}"
+      end
+
+      # codeの中に偶然tagと同じ行が現れても壊れないよう、衝突する限りtagをずらす。
+      # 冪等性のため決定的な連番だけを使う(object_idやSecureRandom等は不可)。
+      def unique_tag(code, base)
+        tag = base
+        suffix = 2
+        while code.lines.any? { |line| line.strip == tag }
+          tag = "#{base}_#{suffix}"
+          suffix += 1
+        end
+        tag
+      end
+
+      def pp_literal(value)
+        PP.pp(value, +"", 80).chomp
+      end
+
+      def camelize(name)
+        name.to_s.split(/[_-]/).map { |part| part[0].upcase + part[1..] }.join
+      end
+    end
+  end
+end

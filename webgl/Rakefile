@@ -1,0 +1,21 @@
+# frozen_string_literal: true
+
+require_relative "lib/glslkit/webgl/embed"
+
+namespace :glslkit do
+  desc "Generate embeddable Ruby constants (manifest + source maps) from .vert/.frag pairs. " \
+    "Usage: rake glslkit:embed[shaders_dir,out_dir]"
+  task :embed, [:shaders_dir, :out_dir] do |_task, args|
+    shaders_dir = args[:shaders_dir]
+    out_dir = args[:out_dir]
+    if !shaders_dir || !out_dir
+      abort "usage: rake glslkit:embed[shaders_dir,out_dir]"
+    end
+
+    results = Glslkit::WebGL::Embed.generate(shaders_dir: shaders_dir, out_dir: out_dir)
+    results.each do |result|
+      puts "wrote #{result.fetch(:path)}"
+      result.fetch(:warnings).each { |warning| warn "  warning: #{warning}" }
+    end
+  end
+end

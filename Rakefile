@@ -2,6 +2,9 @@
 
 require "rake/testtask"
 
+# webgl/Rakefile の glslkit:embed タスクをリポジトリ直下からも呼べるようにする。
+import "webgl/Rakefile"
+
 Rake::TestTask.new(:test_core) do |t|
   t.libs << "core/lib" << "core/test"
   t.test_files = FileList["core/test/**/*_test.rb"]

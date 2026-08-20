@@ -1,3 +1,4 @@
 ruby_version: 3.1
 ignore:
   - "samples/**/*" # rails newで生成したローカル専用のプレビューアプリ(未コミット)
+  - "webgl/test/fixtures/generated/**/*" # rake glslkit:embed の生成物(ゴールデンファイル)。手で編集しない
