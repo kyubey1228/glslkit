@@ -3,6 +3,7 @@
 require "json"
 require_relative "errors"
 require_relative "types"
+require_relative "version"
 
 module Glslkit
   # プログラムごとのvertex+fragment Sourceペアから reflection-v1.json の
@@ -23,7 +24,7 @@ module Glslkit
       version = hash.fetch("schema_version")
       raise UnsupportedVersionError, "unsupported schema_version: #{version.inspect}" unless version == 1
 
-      new(generated_at: hash.fetch("generated_at"), programs: hash.fetch("programs"))
+      new(generated_at: hash.fetch("generated_at"), programs: hash.fetch("programs"), generator: hash["generator"])
     end
 
     # Glslkit::Program (§8.3) の配列からマニフェストのHashを直接組み立てる。
@@ -39,7 +40,7 @@ module Glslkit
     # StageMismatchErrorを投げる経路のままなので、検証を経ていない入力を
     # 渡すと診断を得る前に例外で落ちる。
     def self.build(programs:, urls: {}, now: Time.now)
-      manifest = new(generated_at: now.utc.iso8601)
+      manifest = new(generated_at: now.utc.iso8601, generator: "glslkit/#{Glslkit::VERSION}")
       programs.each do |program|
         next unless program.sources.key?(:vertex) && program.sources.key?(:fragment)
 
@@ -58,9 +59,10 @@ module Glslkit
     end
     private_class_method :stage_input
 
-    def initialize(generated_at:, programs: {})
+    def initialize(generated_at:, programs: {}, generator: nil)
       @generated_at = generated_at
       @programs = programs
+      @generator = generator
     end
 
     def add_program(name, vertex:, fragment:)
@@ -68,12 +70,20 @@ module Glslkit
       self
     end
 
+    # `generator`(M10e)は「このManifestを実際に組み立てたのは何か」を表す
+    # 来歴情報。`build`が呼ばれたときにだけそのバージョンで確定させ、`to_h`が
+    # 呼ばれるたびに現在実行中のバージョンで上書きしたりはしない —
+    # `parse`で読み込んだ古いバージョンの生成物の来歴を破壊しないため。
+    # 未設定(手書きのManifestや、generatorを持たない古い生成物)なら
+    # キー自体を出さない。`reflection-v1.json`でoptional(型はstring)なので
+    # nullを出すとスキーマ違反になる。
     def to_h
       {
         "schema_version" => 1,
         "generated_at" => @generated_at,
+        "generator" => @generator,
         "programs" => @programs
-      }
+      }.compact
     end
 
     def to_json(*args)

@@ -7,12 +7,17 @@ class WebglContextTextureTest < Minitest::Test
 
   def setup
     JS.global.reset_frames
+    # M10e: warn_missing_generator_onceはプロセス内で1回だけを保証するための
+    # クラスインスタンス変数を持つ。テスト間で状態が漏れて順序依存に
+    # ならないよう、公開APIを増やさずinstance_variable_setで直接リセットする。
+    Glslkit::WebGL::Context.instance_variable_set(:@warned_missing_generator, false)
   end
 
   def test_context_builds_named_program_and_draws_arrays
     gl = FakeGL.new
     context = Glslkit::WebGL::Context.new(gl, fake_canvas)
     manifest = {
+      "generator" => "test-fixture",
       "programs" => {
         "basic" => manifest_program(attributes: [
           {"name" => "a_position", "type" => "vec2", "location" => 0, "array_size" => 1}
@@ -29,6 +34,47 @@ class WebglContextTextureTest < Minitest::Test
     names = gl.calls.map(&:first)
     assert_includes names, :useProgram
     assert_includes names, :drawArrays
+  end
+
+  def test_program_warns_once_when_the_manifest_has_no_generator_field
+    gl = FakeGL.new
+    context = Glslkit::WebGL::Context.new(gl, fake_canvas)
+    manifest = {"programs" => {"basic" => manifest_program}}
+
+    _stdout, stderr = capture_io do
+      context.program(manifest, "basic", vertex: "vertex", fragment: "fragment")
+    end
+
+    assert_match(/generator/, stderr)
+    assert_match(/rake glslkit:embed/, stderr)
+  end
+
+  def test_program_warns_only_once_per_process_even_across_multiple_calls
+    gl = FakeGL.new
+    context = Glslkit::WebGL::Context.new(gl, fake_canvas)
+    manifest = {"programs" => {"a" => manifest_program, "b" => manifest_program}}
+
+    _stdout, first_stderr = capture_io do
+      context.program(manifest, "a", vertex: "vertex", fragment: "fragment")
+    end
+    _stdout, second_stderr = capture_io do
+      context.program(manifest, "b", vertex: "vertex", fragment: "fragment")
+    end
+
+    refute_empty first_stderr
+    assert_empty second_stderr
+  end
+
+  def test_program_does_not_warn_when_the_manifest_has_a_generator_field
+    gl = FakeGL.new
+    context = Glslkit::WebGL::Context.new(gl, fake_canvas)
+    manifest = {"generator" => "glslkit/0.1.0", "programs" => {"basic" => manifest_program}}
+
+    _stdout, stderr = capture_io do
+      context.program(manifest, "basic", vertex: "vertex", fragment: "fragment")
+    end
+
+    assert_empty stderr
   end
 
   def test_width_and_height_read_from_the_canvas_element

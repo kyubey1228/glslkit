@@ -73,6 +73,20 @@ class ReflectionSchemaTest < Minitest::Test
     refute_valid manifest
   end
 
+  def test_manifest_with_generator_passes
+    manifest = valid_manifest
+    manifest["generator"] = "glslkit/0.1.0"
+
+    assert_valid manifest
+  end
+
+  def test_generator_must_be_a_string
+    manifest = valid_manifest
+    manifest["generator"] = 1
+
+    refute_valid manifest
+  end
+
   def test_unknown_top_level_key_fails
     manifest = valid_manifest
     manifest["unexpected"] = true

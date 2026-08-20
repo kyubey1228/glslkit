@@ -12,6 +12,10 @@
       "description": "Stays 1 while this schema is unreleased/unpublished, since there is no compatibility to preserve yet. Bump to 2 the first time a required field is added after the schema is published."
     },
     "generated_at": { "type": "string", "format": "date-time" },
+    "generator": {
+      "type": "string",
+      "description": "Optional provenance marker set by tools that build this manifest from real GLSL sources (e.g. `Glslkit::Manifest.build`, `rake glslkit:embed`), of the form \"glslkit/<version>\". Absent on hand-written manifests, which bypass glslkit's validation entirely. Consumers MAY warn when it is missing, but MUST NOT require it (optional, not required, so existing manifests stay valid)."
+    },
     "programs": {
       "type": "object",
       "additionalProperties": { "$ref": "#/$defs/program" }

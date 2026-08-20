@@ -113,6 +113,7 @@ GLSLKIT_FRAGMENT_SRC
 
   MANIFEST = {"schema_version"=>1,
  "generated_at"=>"1970-01-01T00:00:00Z",
+ "generator"=>"glslkit/0.1.0",
  "programs"=>
   {"neon-broken"=>
     {"digest"=>

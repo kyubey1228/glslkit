@@ -156,4 +156,38 @@ class ManifestTest < Minitest::Test
 
     assert_raises(Glslkit::Manifest::UnsupportedVersionError) { Glslkit::Manifest.parse(hash) }
   end
+
+  def test_build_sets_the_generator_field_to_the_current_version
+    vertex = process("void main() {}\n", "a.vert")
+    fragment = process("out vec4 c;\nvoid main() {}\n", "a.frag")
+    program = Glslkit::Program.new(name: "a", sources: {vertex: vertex, fragment: fragment})
+
+    manifest = Glslkit::Manifest.build(programs: [program])
+
+    assert_equal "glslkit/#{Glslkit::VERSION}", manifest["generator"]
+  end
+
+  def test_hand_built_manifest_omits_the_generator_field_entirely
+    manifest = Glslkit::Manifest.new(generated_at: "2026-08-17T00:00:00Z")
+
+    refute manifest.to_h.key?("generator")
+  end
+
+  def test_parse_preserves_the_original_generator_instead_of_overwriting_it
+    hash = build_manifest.to_h
+    hash["generator"] = "glslkit/0.0.1-from-a-much-older-build"
+
+    parsed = Glslkit::Manifest.parse(hash)
+
+    assert_equal "glslkit/0.0.1-from-a-much-older-build", parsed.to_h["generator"]
+  end
+
+  def test_parse_of_a_hand_written_manifest_keeps_generator_absent
+    hash = build_manifest.to_h
+    refute hash.key?("generator")
+
+    parsed = Glslkit::Manifest.parse(hash)
+
+    refute parsed.to_h.key?("generator")
+  end
 end

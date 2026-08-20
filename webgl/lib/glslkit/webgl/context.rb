@@ -16,6 +16,18 @@ module Glslkit
         new(gl, canvas)
       end
 
+      # 手書きマニフェスト(M10a前調査5)はglslkitの検証を一切通らずに
+      # ここまで来られてしまう。M10eでそのことに一度だけ気付けるようにする。
+      # 例外にはしない(手書きマニフェストそのものを禁止する話ではない)。
+      # プロセス内で1回だけ出す — Context.debugとは独立の、常時の警告。
+      def self.warn_missing_generator_once
+        return if @warned_missing_generator
+
+        @warned_missing_generator = true
+        warn "manifest has no generator field; hand-written manifests bypass " \
+          "glslkit's validation. Use `rake glslkit:embed`."
+      end
+
       def initialize(gl, canvas)
         @gl = gl
         @canvas = canvas
@@ -35,6 +47,7 @@ module Glslkit
 
       def program(manifest, name, vertex:, fragment:, source_maps: {})
         manifest_hash = manifest.respond_to?(:to_h) ? manifest.to_h : manifest
+        self.class.warn_missing_generator_once unless manifest_hash.key?("generator")
         entry = manifest_hash.fetch("programs").fetch(name.to_s) do
           raise UnknownProgramError, "program not found in manifest: #{name}"
         end
