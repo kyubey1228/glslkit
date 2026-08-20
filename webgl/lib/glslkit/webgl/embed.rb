@@ -46,6 +46,10 @@ module Glslkit
         unless result.ok?
           raise ValidationError, "glslkit:embed validation failed for #{name}:\n#{result.errors.join("\n")}"
         end
+        # 警告は生成を止めない(エラーと違う)が、握り潰さず必ず標準エラーに出す。
+        # rakeタスク経由でなく Embed.generate を直接呼んだ場合でも見えるように、
+        # ここ(ライブラリ側)で出す。呼び出し側での二重出力は行わない。
+        result.warnings.each { |warning| warn "[glslkit:embed] #{name}: #{warning}" }
 
         manifest = Glslkit::Manifest.build(programs: [program], urls: {name => stages}, now: EMBEDDED_TIMESTAMP)
         out_path = File.join(out_dir, "#{name}_shaders.rb")

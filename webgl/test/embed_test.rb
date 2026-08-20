@@ -31,7 +31,7 @@ class EmbedTest < Minitest::Test
     code = "  #version 300 es\n  layout(location = 0) in vec2 a;\n  void main() {\n    gl_Position = vec4(a, 0.0, 1.0);\n  }\n"
 
     literal = Glslkit::WebGL::Embed.heredoc_literal(code, "REGRESSION_TAG", suffix: ".freeze")
-    restored = eval(literal)
+    restored = eval(literal) # rubocop:disable Security/Eval -- literal is our own generated heredoc source, not external input
 
     assert_equal code, restored
   end
@@ -108,6 +108,29 @@ class EmbedTest < Minitest::Test
         end
         assert_match(/E004/, error.message)
         assert_empty Dir.glob(File.join(out_dir, "*.rb"))
+      end
+    end
+  end
+
+  # 修正3: Validatorの警告(E002はwarning、SPEC.md §8.4)は生成を止めないが、
+  # 握り潰さず標準エラーに出す。rakeタスク経由でなく Embed.generate を
+  # 直接呼んでも見えることを確認する。
+  def test_validator_warnings_are_written_to_stderr_but_do_not_stop_generation
+    Dir.mktmpdir do |shaders_dir|
+      # vertexにoutが無いため、fragmentのinに対応する相手がおらずE002(warning)。
+      File.write(File.join(shaders_dir, "mismatch.vert"), "void main() {}\n")
+      File.write(File.join(shaders_dir, "mismatch.frag"), "in vec2 v_uv;\nout vec4 c;\nvoid main() {}\n")
+
+      Dir.mktmpdir do |out_dir|
+        results = nil
+        _stdout, stderr = capture_io { results = Glslkit::WebGL::Embed.generate(shaders_dir: shaders_dir, out_dir: out_dir) }
+
+        assert_equal 1, results.size
+        assert_equal 1, results.first.fetch(:warnings).size
+        assert_equal "E002", results.first.fetch(:warnings).first.code
+        assert_match(/E002/, stderr)
+        assert_match(/v_uv/, stderr)
+        assert_equal ["mismatch_shaders.rb"], Dir.glob(File.join(out_dir, "*.rb")).map { |p| File.basename(p) }
       end
     end
   end

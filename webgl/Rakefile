@@ -12,10 +12,9 @@ namespace :glslkit do
       abort "usage: rake glslkit:embed[shaders_dir,out_dir]"
     end
 
+    # 警告の標準エラー出力はGlslkit::WebGL::Embed.generate自身が行う
+    # (rakeタスク経由でなくても見えるようにするため)。ここで二重には出さない。
     results = Glslkit::WebGL::Embed.generate(shaders_dir: shaders_dir, out_dir: out_dir)
-    results.each do |result|
-      puts "wrote #{result.fetch(:path)}"
-      result.fetch(:warnings).each { |warning| warn "  warning: #{warning}" }
-    end
+    results.each { |result| puts "wrote #{result.fetch(:path)}" }
   end
 end
