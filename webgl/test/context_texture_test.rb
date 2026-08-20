@@ -11,7 +11,7 @@ class WebglContextTextureTest < Minitest::Test
 
   def test_context_builds_named_program_and_draws_arrays
     gl = FakeGL.new
-    context = Glslkit::WebGL::Context.new(gl)
+    context = Glslkit::WebGL::Context.new(gl, fake_canvas)
     manifest = {
       "programs" => {
         "basic" => manifest_program(attributes: [
@@ -31,9 +31,33 @@ class WebglContextTextureTest < Minitest::Test
     assert_includes names, :drawArrays
   end
 
+  def test_width_and_height_read_from_the_canvas_element
+    context = Glslkit::WebGL::Context.new(FakeGL.new, fake_canvas(width: 320, height: 240))
+
+    assert_equal 320, context.width
+    assert_equal 240, context.height
+  end
+
+  def test_viewport_defaults_to_the_canvas_size
+    gl = FakeGL.new
+    context = Glslkit::WebGL::Context.new(gl, fake_canvas(width: 320, height: 240))
+
+    assert_same context, context.viewport
+    assert_equal [:viewport, 0, 0, 320, 240], gl.calls.first
+  end
+
+  def test_viewport_still_accepts_explicit_dimensions
+    gl = FakeGL.new
+    context = Glslkit::WebGL::Context.new(gl, fake_canvas(width: 320, height: 240))
+
+    context.viewport(64, 48, x: 1, y: 2)
+
+    assert_equal [:viewport, 1, 2, 64, 48], gl.calls.first
+  end
+
   def test_texture_uploads_static_rgba_pixels
     gl = FakeGL.new
-    context = Glslkit::WebGL::Context.new(gl)
+    context = Glslkit::WebGL::Context.new(gl, fake_canvas)
 
     texture = context.texture2d(width: 1, height: 1, data: [255, 0, 0, 255], unit: 2)
 
@@ -43,7 +67,7 @@ class WebglContextTextureTest < Minitest::Test
   end
 
   def test_loop_passes_elapsed_seconds_and_reregisters
-    context = Glslkit::WebGL::Context.new(FakeGL.new)
+    context = Glslkit::WebGL::Context.new(FakeGL.new, fake_canvas)
     elapsed = []
 
     tick = context.loop { |seconds| elapsed << seconds }
@@ -55,7 +79,7 @@ class WebglContextTextureTest < Minitest::Test
 
   def test_debug_mode_checks_gl_error_once_at_frame_end
     gl = FakeGL.new
-    context = Glslkit::WebGL::Context.new(gl)
+    context = Glslkit::WebGL::Context.new(gl, fake_canvas)
     Glslkit::WebGL.debug = true
     context.loop { nil }
 

@@ -13,15 +13,24 @@ module Glslkit
         if gl == JS::Null || gl == JS::Undefined
           raise UnsupportedError, "WebGL2 is not available for #{selector}"
         end
-        new(gl)
+        new(gl, canvas)
       end
 
-      def initialize(gl)
+      def initialize(gl, canvas)
         @gl = gl
+        @canvas = canvas
         @performance = JS.global[:performance]
         @request_animation_frame = JS.global
         @programs = []
         @state = {program: nil}
+      end
+
+      def width
+        @canvas[:width].to_i
+      end
+
+      def height
+        @canvas[:height].to_i
       end
 
       def program(manifest, name, vertex:, fragment:, source_maps: {})
@@ -49,8 +58,8 @@ module Glslkit
         Texture.new(@gl, width: width, height: height, data: data, unit: unit)
       end
 
-      def viewport(width, height, x: 0, y: 0)
-        @gl.call(:viewport, x, y, width, height)
+      def viewport(width = nil, height = nil, x: 0, y: 0)
+        @gl.call(:viewport, x, y, width || self.width, height || self.height)
         self
       end
 

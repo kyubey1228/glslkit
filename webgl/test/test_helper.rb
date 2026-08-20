@@ -54,6 +54,10 @@ class FakeGL
 end
 
 module WebglFixtures
+  def fake_canvas(width: 64, height: 64)
+    JS::Object.new(width: width, height: height)
+  end
+
   def manifest_program(uniforms: [], attributes: [])
     {
       "digest" => "0" * 64,
