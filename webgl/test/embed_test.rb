@@ -135,6 +135,37 @@ class EmbedTest < Minitest::Test
     end
   end
 
+  # 修正4: プログラム名からのモジュール名導出規則を固定する。
+  # 単語区切りは非英数字の連続(`_` `-` `.` 等)すべて。先頭大文字化して連結し
+  # "Shaders" を付ける。結果が有効なRubyの定数名でなければ例外を投げる
+  # (数字始まりを無言で辻褄合わせしたりしない)。
+  def test_module_name_derivation_rule
+    assert_equal "NeonShaders", Glslkit::WebGL::Embed.module_name_for("neon")
+    assert_equal "PbrLightingShaders", Glslkit::WebGL::Embed.module_name_for("pbr_lighting")
+    assert_equal "CommonGlslShaders", Glslkit::WebGL::Embed.module_name_for("common.glsl")
+
+    error = assert_raises(Glslkit::WebGL::Embed::InvalidProgramNameError) do
+      Glslkit::WebGL::Embed.module_name_for("2d-post")
+    end
+    assert_match(/2d-post/, error.message)
+    assert_match(/2dPostShaders/, error.message)
+  end
+
+  def test_generate_raises_a_clear_error_for_a_program_name_that_cannot_become_a_module_name
+    Dir.mktmpdir do |shaders_dir|
+      File.write(File.join(shaders_dir, "2d-post.vert"), "void main() {}\n")
+      File.write(File.join(shaders_dir, "2d-post.frag"), "void main() {}\n")
+
+      Dir.mktmpdir do |out_dir|
+        error = assert_raises(Glslkit::WebGL::Embed::InvalidProgramNameError) do
+          Glslkit::WebGL::Embed.generate(shaders_dir: shaders_dir, out_dir: out_dir)
+        end
+        assert_match(/2d-post/, error.message)
+        assert_empty Dir.glob(File.join(out_dir, "*.rb"))
+      end
+    end
+  end
+
   def test_vert_without_a_matching_frag_is_skipped
     Dir.mktmpdir do |shaders_dir|
       File.write(File.join(shaders_dir, "partial.vert"), "void main() {}\n")

@@ -17,6 +17,10 @@ module Glslkit
       EMBEDDED_TIMESTAMP = Time.at(0).utc
 
       class ValidationError < StandardError; end
+      class InvalidProgramNameError < StandardError; end
+
+      # 有効なRubyの定数名(1つの識別子として)であることを要求する。
+      MODULE_NAME_PATTERN = /\A[A-Z][A-Za-z0-9_]*\z/
 
       module_function
 
@@ -38,6 +42,7 @@ module Glslkit
       end
 
       def write_program(preprocessor, name, stages, out_dir)
+        module_name_for(name) # 実際にファイルを読む前に名前だけ先に検証する(fail fast)。
         vertex = preprocessor.process(stages.fetch(:vertex))
         fragment = preprocessor.process(stages.fetch(:fragment))
         program = Glslkit::Program.new(name: name, sources: {vertex: vertex, fragment: fragment})
@@ -70,7 +75,7 @@ module Glslkit
       end
 
       def render(name:, manifest:, vertex:, fragment:)
-        module_name = "#{camelize(name)}Shaders"
+        module_name = module_name_for(name)
         vertex_tag = unique_tag(vertex.code, "GLSLKIT_VERTEX_SRC")
         fragment_tag = unique_tag(fragment.code, "GLSLKIT_FRAGMENT_SRC")
 
@@ -120,8 +125,24 @@ module Glslkit
         PP.pp(value, +"", 80).chomp
       end
 
-      def camelize(name)
-        name.to_s.split(/[_-]/).map { |part| part[0].upcase + part[1..] }.join
+      # 規則(修正4): プログラム名を非英数字(`_` `-` `.` 等、任意の連続)で
+      # 単語に分割し、各単語の先頭だけ大文字化して連結、末尾に "Shaders" を
+      # 付ける。例: "neon" -> "NeonShaders"、"pbr_lighting" -> "PbrLightingShaders"、
+      # "common.glsl" -> "CommonGlslShaders"(`.`も区切り文字として扱う)。
+      #
+      # 結果が有効なRubyの定数名でなければ(例: "2d-post" -> "2dPostShaders" は
+      # 数字始まりで無効)、無言で辻褄を合わせようとせず例外を投げる。
+      def module_name_for(name)
+        words = name.to_s.split(/[^a-zA-Z0-9]+/).reject(&:empty?)
+        camelized = words.map { |word| word[0].upcase + word[1..] }.join
+        module_name = "#{camelized}Shaders"
+        unless MODULE_NAME_PATTERN.match?(module_name)
+          raise InvalidProgramNameError,
+            "cannot derive a valid Ruby module name from program #{name.inspect} " \
+            "(got #{module_name.inspect}). Rename the .vert/.frag pair so the shared " \
+            "basename starts with a letter."
+        end
+        module_name
       end
     end
   end
