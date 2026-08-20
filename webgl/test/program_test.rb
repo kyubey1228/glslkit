@@ -38,6 +38,30 @@ class WebglProgramTest < Minitest::Test
     assert_equal "common/math.glsl:12: ';' : syntax error", error.message
   end
 
+  # 修正2: parse_logは行番号を取り出せる(=lineがnilではない)が、その行が
+  # どのsegmentにも属さない場合(#versionがホイストされ、対応する元行の
+  # 記録が無い等)。resolveがnilを返しても壊れず、file/lineがnilに
+  # 落ちることを確認する(M10dのエラーデモが成立する前提)。
+  def test_compile_error_degrades_gracefully_when_the_line_is_outside_every_segment
+    gl = FakeGL.new
+    gl.shader_ok = false
+    gl.shader_log = "ERROR: 0:1: '#version' : must occur first in shader"
+    source_map = Glslkit::SourceMap.new
+    index = source_map.index_for("main.vert")
+    source_map.add_segment(output_line: 2, file_index: index, source_line: 2)
+
+    error = assert_raises(Glslkit::WebGL::CompileError) do
+      Glslkit::WebGL::Program.new(gl, manifest_program,
+        vertex: "broken", fragment: "fragment", source_maps: {vertex: source_map})
+    end
+
+    assert_equal :vertex, error.stage
+    assert_nil error.file
+    assert_nil error.line
+    assert_equal "ERROR: 0:1: '#version' : must occur first in shader", error.raw_log
+    assert_equal "'#version' : must occur first in shader", error.message
+  end
+
   def test_unparseable_compile_log_still_raises_with_raw_log
     gl = FakeGL.new
     gl.shader_ok = false
