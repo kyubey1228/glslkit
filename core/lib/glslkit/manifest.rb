@@ -40,6 +40,10 @@ module Glslkit
     # StageMismatchErrorを投げる経路のままなので、検証を経ていない入力を
     # 渡すと診断を得る前に例外で落ちる。
     def self.build(programs:, urls: {}, now: Time.now)
+      # digest(§8.9)と同じ扱い: `.iso8601` はstdlibの"time"の拡張なので、
+      # 実際に使う`.build`経路でだけ遅延require する。`glslkit/runtime`
+      # (`.parse`/`.to_h`のみ)はこのメソッドを経由しないため影響しない。
+      require "time"
       manifest = new(generated_at: now.utc.iso8601, generator: "glslkit/#{Glslkit::VERSION}")
       programs.each do |program|
         next unless program.sources.key?(:vertex) && program.sources.key?(:fragment)

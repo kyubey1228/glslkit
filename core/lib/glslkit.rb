@@ -15,6 +15,7 @@ require_relative "glslkit/minifier"
 require_relative "glslkit/program"
 require_relative "glslkit/diagnostic"
 require_relative "glslkit/validator"
+require_relative "glslkit/bundle"
 
 module Glslkit
 end
