@@ -3,10 +3,15 @@
 require "glslkit"
 require "propshaft"
 require_relative "rails/version"
+require_relative "rails/shader_programs"
 require_relative "rails/compiler"
 require_relative "rails/manifest_builder"
 require_relative "rails/manifest_reader"
 require_relative "rails/helper"
+require_relative "rails/live_reload/known_files"
+require_relative "rails/live_reload/programs_controller"
+require_relative "rails/live_reload/engine"
+require_relative "rails/live_reload/mount"
 require_relative "rails/railtie"
 
 module Glslkit

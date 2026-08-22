@@ -14,6 +14,8 @@ module Glslkit
       config.glslkit.validate = true
       config.glslkit.fail_on_warning = false
       config.glslkit.disabled_checks = []
+      # M11c: SPEC-livereload.md §3.3。既定はdevelopmentでのみ有効。
+      config.glslkit.live_reload = ::Rails.env.development?
 
       # Mime::Type.register を使う (Propshaft::Asset#content_type 自身が
       # 実際に使っている経路)。Marcelを直接使うことはしない — MarcelはPropshaft
@@ -39,6 +41,19 @@ module Glslkit
 
       rake_tasks do
         load File.expand_path("../../tasks/glslkit.rake", __dir__)
+      end
+
+      # M11c: SPEC-livereload.md §3.3。利用者のroutes.rb編集を要求しないため、
+      # ミドルウェアとして直接差し込む(`app.routes.append`によるmountは
+      # RouteSetのfinalize!タイミングに対してrace conditionがあり、
+      # 実機検証で再現性なく404になることが判明したため採用しなかった。
+      # 詳細はLiveReload::Mountのコメントを参照)。config.glslkit.live_reload
+      # が false(既定でproduction)ならミドルウェア自体を挿入しないため、
+      # `/glslkit/*` は通常のルーティングに委ねられ存在しない扱いになる。
+      initializer "glslkit.mount_live_reload" do |app|
+        next unless app.config.glslkit.live_reload
+
+        app.middleware.use Glslkit::Rails::LiveReload::Mount, Glslkit::Rails::LiveReload::Engine
       end
 
       initializer "glslkit.view_helpers" do

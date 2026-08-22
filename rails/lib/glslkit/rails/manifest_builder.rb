@@ -67,26 +67,14 @@ module Glslkit
         @app.config.glslkit
       end
 
+      # 発見ロジック本体はShaderProgramsに集約している(LiveReload::ProgramsController
+      # と共有するため、M11c)。
       def shader_roots
-        glslkit_config.paths.map { |path| @app.root.join(path).to_s }
+        ShaderPrograms.roots(@app)
       end
 
-      # {"pbr" => {vertex: "pbr.vert", fragment: "pbr.frag"}, ...} を返す。
-      # 同名の相方が無い.vert/.fragはスキップする(SPEC.md §2.4/§3: プログラム
-      # は両ステージが必須だが、app/shaders配下の.vert/.frag全てがプログラム
-      # になることを意図しているわけではない。例えば共有partialの場合)。
       def programs
-        by_name = Hash.new { |h, k| h[k] = {} }
-
-        shader_roots.each do |root|
-          Dir.glob("**/*.{vert,frag}", base: root).each do |relative|
-            ext = File.extname(relative)
-            stage = (ext == ".vert") ? :vertex : :fragment
-            by_name[relative.delete_suffix(ext)][stage] = relative
-          end
-        end
-
-        by_name.select { |_, stages| stages.key?(:vertex) && stages.key?(:fragment) }
+        ShaderPrograms.discover(@app)
       end
 
       def stage_input(relative_path)
