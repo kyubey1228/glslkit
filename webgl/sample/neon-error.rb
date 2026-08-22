@@ -58,6 +58,9 @@ show_source_excerpt = ->(file, line) do
     span[:textContent] = format("%3d| %s", line_number, lines[index])
     container.call(:appendChild, span)
   end
+  # fetchが成功して実際に行を追加できたときだけ枠を見せる。file://で開いた
+  # 場合などfetchが失敗すると、ここに到達せず空の帯が残ることはない。
+  container[:className] = "has-content"
 rescue => _e
   nil
 end
