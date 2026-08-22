@@ -10,6 +10,10 @@ module Glslkit
       config.glslkit.minify = ::Rails.env.production?
       config.glslkit.line_directives = !::Rails.env.production?
       config.glslkit.manifest_path = "glsl-manifest.json"
+      # M11a: SPEC.md §8.6。デフォルトで検証は有効、警告での失敗は無効。
+      config.glslkit.validate = true
+      config.glslkit.fail_on_warning = false
+      config.glslkit.disabled_checks = []
 
       # Mime::Type.register を使う (Propshaft::Asset#content_type 自身が
       # 実際に使っている経路)。Marcelを直接使うことはしない — MarcelはPropshaft

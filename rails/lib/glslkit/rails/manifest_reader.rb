@@ -14,11 +14,24 @@ module Glslkit
         if ::Rails.env.production?
           @manifest ||= read_precompiled_manifest
         else
-          ManifestBuilder.new(::Rails.application).build
+          build_and_log_diagnostics
         end
       end
 
       private
+
+      # developmentでは検証結果をログに出すが、決して例外を投げない
+      # (SPEC.md §8.6: 「development では検証するが失敗させない」)。
+      # 失敗させるのは `assets:precompile` フック(rails/lib/tasks/glslkit.rake)
+      # と `rake glslkit:check` の役目。
+      def build_and_log_diagnostics
+        builder = ManifestBuilder.new(::Rails.application)
+        result = builder.build
+        if ::Rails.application.config.glslkit.validate
+          builder.diagnostics.each { |diagnostic| ::Rails.logger.warn("[glslkit] #{diagnostic}") }
+        end
+        result
+      end
 
       def read_precompiled_manifest
         JSON.parse(File.read(manifest_path))

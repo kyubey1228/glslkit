@@ -95,7 +95,53 @@ class DummyAppPrecompileTest < Minitest::Test
     assert_equal %w[material pbr], result["programs"].sort
   end
 
+  def test_assets_precompile_aborts_on_a_validation_error
+    with_broken_shader do
+      Dir.mktmpdir do |public_root|
+        stdout, stderr, status = precompile(public_root)
+        refute status.success?, stdout + stderr
+        assert_match(/E006/, stdout + stderr)
+        refute manifest_path(public_root).exist?
+      end
+    end
+  end
+
+  def test_glslkit_check_exits_non_zero_on_a_validation_error
+    with_broken_shader do
+      stdout, stderr, status = run_in_dummy_app("bin/rails", "glslkit:check", env: {"RAILS_ENV" => "test"})
+      refute status.success?, stdout + stderr
+      assert_match(/E006/, stdout + stderr)
+    end
+  end
+
+  def test_glslkit_check_succeeds_when_shaders_are_valid
+    stdout, stderr, status = run_in_dummy_app("bin/rails", "glslkit:check", env: {"RAILS_ENV" => "test"})
+    assert status.success?, stdout + stderr
+  end
+
   private
+
+  # E006(同一ステージ内でのuniform名の重複)を故意に発生させる。テスト後は
+  # 必ず削除する(このシェーダ対がprograms検出に残ると他のテストの
+  # manifest["programs"]の期待値がずれるため)。
+  def with_broken_shader
+    vert_path = Pathname.new(DummyAppTestHelper::DUMMY_ROOT).join("app/shaders/broken.vert")
+    frag_path = Pathname.new(DummyAppTestHelper::DUMMY_ROOT).join("app/shaders/broken.frag")
+    vert_path.write(<<~GLSL)
+      in vec3 a_position;
+      void main() { gl_Position = vec4(a_position, 1.0); }
+    GLSL
+    frag_path.write(<<~GLSL)
+      uniform float u_x;
+      uniform vec3 u_x;
+      out vec4 fragColor;
+      void main() { fragColor = vec4(1.0); }
+    GLSL
+    yield
+  ensure
+    vert_path.delete if vert_path.exist?
+    frag_path.delete if frag_path.exist?
+  end
 
   def production_env(public_root)
     {"RAILS_ENV" => "production", "SECRET_KEY_BASE" => "x" * 64, "GLSLKIT_TEST_PUBLIC_ROOT" => public_root}
