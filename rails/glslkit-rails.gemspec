@@ -26,6 +26,10 @@ Gem::Specification.new do |spec|
 
   spec.add_dependency "glslkit", "~> 0.1"
   spec.add_dependency "railties", ">= 7.1"
+  # railties >= 7.1に推移的に含まれるため追加インストールは発生しないが、
+  # M11でActionController::APIベースのライブリロードEngineを提供するため
+  # 明示的に宣言する(SPEC-livereload.md 決定7)。
+  spec.add_dependency "actionpack", ">= 7.1"
   # 実際にインストールされた1.3.2で確認したCompiler API
   # (Propshaft::Compiler#compile(asset, input), #referenced_by(asset),
   # Propshaft::Compilers#register(mime_type, klass)) に合わせて固定している。
