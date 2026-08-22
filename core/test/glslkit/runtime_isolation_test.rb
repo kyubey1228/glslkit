@@ -64,4 +64,25 @@ class RuntimeIsolationTest < Minitest::Test
     assert status.success?, "subprocess failed: #{stderr}"
     refute_equal "true", stdout.strip
   end
+
+  # M11b-2: 上のテスト群は「狭い入口が余計なものをロードしないか」(load過多)を
+  # 見ている。これはその逆方向 — 「個々のファイルを他をrequireせず単独で
+  # requireしたときに、load時点のコードが壊れないか」(require不足)を見る。
+  # 各ファイルはrequire_relativeで自分の依存を宣言しているはずなので、
+  # aggregator(glslkit.rb)を経由しない単独requireでも例外が出てはならない。
+  #
+  # これは「メソッドを呼んだときに初めて発覚するstdlib暗黙依存」
+  # (`Manifest.build`の`.iso8601`がその例だった)までは捕まえない —
+  # あくまでload時点(クラス/モジュール定義本体)の話であることに注意。
+  def test_every_core_lib_file_can_be_required_standalone
+    files = Dir.glob(File.join(LIB_DIR, "glslkit", "**", "*.rb")).sort
+    refute_empty files
+
+    failures = files.filter_map do |file|
+      _stdout, stderr, status = Open3.capture3(RbConfig.ruby, "-e", "require #{file.inspect}")
+      "#{file}:\n#{stderr}" unless status.success?
+    end
+
+    assert_empty failures, failures.join("\n\n")
+  end
 end

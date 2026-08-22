@@ -7,7 +7,6 @@
 require "glslkit"
 require "pp"
 require "fileutils"
-require "time"
 
 module Glslkit
   module WebGL
