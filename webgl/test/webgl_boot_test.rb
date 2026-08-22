@@ -28,12 +28,16 @@ class WebglBootTest < Minitest::Test
   def test_webgl_ruby_sources_do_not_call_class
     # self.class はJS::Objectではなく素のRubyレシーバに対する呼び出しであり
     # R6の懸念(JS値への#classがReflect.hasで例外になる)とは無関係なので除外する。
+    # 1行に複数の`.class`があっても取りこぼさないよう、レシーバ単位で判定する
+    # (行単位で「selfという文字列を含むか」だけを見ると、同じ行に本物の
+    # 違反が同居していた場合に見逃すため)。
     sources = Dir.glob(File.join(ROOT, "webgl", "lib", "**", "*.rb"))
     violations = sources.each_with_object([]) do |path, found|
       File.foreach(path).with_index(1) do |line, number|
-        next if line.match?(/\bself\.class\b/)
+        receivers = line.scan(/(\w+)\.class\b/).flatten
+        next if receivers.empty? || receivers.all? { |receiver| receiver == "self" }
 
-        found << "#{path}:#{number}:#{line.strip}" if line.match?(/\.class\b/)
+        found << "#{path}:#{number}:#{line.strip}"
       end
     end
 

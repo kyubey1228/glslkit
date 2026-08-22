@@ -7,9 +7,10 @@ and reports shader compiler errors as Ruby exceptions.
 ## Quick start
 
 Serve this repository over HTTP and open `webgl/sample/index.html`. The sample
-draws a rotating, textured cube without application JavaScript.
+draws a rotating, textured cube without application JavaScript, built from
+`webgl/sample/shaders/cube.{vert,frag}` via `rake glslkit:embed`.
 `webgl/sample/neon.html` is an animated fragment-shader raymarching demo, built
-from `webgl/sample/shaders/*` via `rake glslkit:embed`.
+from `webgl/sample/shaders/neon.*` the same way.
 `webgl/sample/neon-error.html` intentionally breaks `common/sdf.glsl` (an
 `#include`d file, not the top-level shader) to demonstrate that `CompileError`
 reports the original included file and line, with a button to switch back to
@@ -41,13 +42,13 @@ geometry = ctx.geometry(program: program, attributes: {
 }, indices: indices)
 texture = ctx.texture2d(width: 2, height: 2, data: rgba_pixels, unit: 0)
 
-matrix = JS.global[:Float32Array].new(16)
+matrix = Array.new(16, 0.0)
 ctx.loop do |seconds|
   Glslkit::WebGL::Matrix.rotation_z!(matrix, seconds)
   program.set(:u_transform, matrix)
   program.set(:u_texture, texture.unit)
   texture.bind
-  ctx.draw(geometry, program: program)
+  ctx.draw(geometry)
 end
 ```
 
