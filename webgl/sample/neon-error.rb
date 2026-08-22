@@ -40,27 +40,38 @@ start_render_loop = ->(ctx, program, geometry) {
 # 壊れた行の前後を、includeされた元ファイル(common/sdf.glsl)自体から
 # fetchして見せる(参考情報。任意)。file:// で開く等でfetchが失敗しても
 # パネル本体(file/line/message/raw_log)の表示は壊さない。
+#
+# M11: 元は .await ベースだったが、spike/09-fetch.htmlの実機確認で
+# 「JS::Object#await は RubyVM#evalAsync/RbValue#callAsync からしか呼べない」
+# ことが判明した。この.rbは webgl/shim/glslkit-webgl.js
+# (JS::RequireRemote.instance.load 経由)でロードされ、evalAsyncされているのは
+# そのロード処理自体であって、ロードされたこのファイルのトップレベルは
+# その対象に含まれない — そのため.awaitは常に失敗し、ここは(rescueで
+# 握り潰されて)一度も動いていなかった可能性が高い。.then + Procに書き換える。
 show_source_excerpt = ->(file, line) do
   next unless line
 
-  response = JS.global.fetch(file).await
-  next unless response[:ok] == JS::True
+  on_response = proc { |response| response.call(:text) if response[:ok] == JS::True }
+  on_text = proc do |text|
+    next if text.nil?
 
-  lines = response.text.await.to_s.split("\n", -1)
-  from = [line - 3, 0].max
-  to = [line + 2, lines.length - 1].min
+    lines = text.to_s.split("\n", -1)
+    from = [line - 3, 0].max
+    to = [line + 2, lines.length - 1].min
 
-  container = document.call(:getElementById, "excerpt")
-  (from..to).each do |index|
-    line_number = index + 1
-    span = document.call(:createElement, "span")
-    span[:className] = (line_number == line) ? "line error-line" : "line"
-    span[:textContent] = format("%3d| %s", line_number, lines[index])
-    container.call(:appendChild, span)
+    container = document.call(:getElementById, "excerpt")
+    (from..to).each do |index|
+      line_number = index + 1
+      span = document.call(:createElement, "span")
+      span[:className] = (line_number == line) ? "line error-line" : "line"
+      span[:textContent] = format("%3d| %s", line_number, lines[index])
+      container.call(:appendChild, span)
+    end
+    # fetchが成功して実際に行を追加できたときだけ枠を見せる。file://で開いた
+    # 場合などfetchが失敗すると、ここに到達せず空の帯が残ることはない。
+    container[:className] = "has-content"
   end
-  # fetchが成功して実際に行を追加できたときだけ枠を見せる。file://で開いた
-  # 場合などfetchが失敗すると、ここに到達せず空の帯が残ることはない。
-  container[:className] = "has-content"
+  JS.global.fetch(file).call(:then, on_response).call(:then, on_text).call(:catch, proc { |_e| })
 rescue => _e
   nil
 end
