@@ -8,6 +8,10 @@ module Glslkit
     class UnknownUniformError < Error; end
     class UniformLengthError < Error; end
     class ShaderError < Error; end
+    # M11d: reload_program(SPEC-livereload.md §4.2)で新旧のattribute location
+    # が一致しない場合に投げる。既存のVAOをそのまま使い続けると壊れた描画に
+    # なるため、無言で続行せずページのリロードを促す。
+    class ReloadIncompatibleError < Error; end
 
     class CompileError < ShaderError
       attr_reader :stage, :file, :line, :raw_log

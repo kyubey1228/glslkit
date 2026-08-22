@@ -41,6 +41,14 @@ class RuntimeIsolationTest < Minitest::Test
     assert_includes loaded, "source_map.rb"
   end
 
+  # M11d: Glslkit::Diagnostic(Context#reload_programの戻り値が使う)は
+  # stdlib依存の無いプレーンなStructなので、狭い入口からもロードしてよい。
+  def test_runtime_does_load_diagnostic
+    loaded = loaded_basenames_after("glslkit/runtime")
+
+    assert_includes loaded, "diagnostic.rb"
+  end
+
   def test_full_entrypoint_still_loads_everything
     loaded = loaded_basenames_after("glslkit")
 

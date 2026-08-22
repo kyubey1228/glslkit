@@ -54,6 +54,45 @@ module Glslkit
         self
       end
 
+      # M11d: reload時にuniform値を引き継ぐため(SPEC-livereload.md §4.3)の、
+      # 名前ごとの現在値スナップショット。{name_sym => {type:, element_count:, values:}}。
+      # typeは互換性判定にのみ使う(値そのものには使わない)。
+      def uniform_snapshot
+        @manifest_program.fetch("uniforms").each_with_object({}) do |uniform, snapshot|
+          name = uniform.fetch("name").to_sym
+          index = @uniform_indices.fetch(name)
+          count = @uniform_lengths[index]
+          buffer = @uniform_buffers[index]
+          snapshot[name] = {
+            type: uniform.fetch("type"),
+            element_count: count,
+            values: Array.new(count) { |i| buffer[i].to_f }
+          }
+        end
+      end
+
+      # reload後、旧Program(old_program)が持っていたuniform値を自分自身に
+      # 復元する。名前・type・element_countがすべて一致するものだけを復元し、
+      # 一致しないものは戻り値に集めて呼び出し側(Context)に返す。R4には
+      # 反しない(初期化時1回の書き込みであり、毎フレームの再確保ではない)。
+      def restore_uniforms_from(old_program)
+        new_snapshot = uniform_snapshot
+        discarded = []
+
+        old_program.uniform_snapshot.each do |name, old_entry|
+          new_entry = new_snapshot[name]
+          if new_entry.nil?
+            discarded << {name: name, reason: :removed}
+          elsif new_entry[:type] != old_entry[:type] || new_entry[:element_count] != old_entry[:element_count]
+            discarded << {name: name, reason: :type_changed, from: old_entry[:type], to: new_entry[:type]}
+          else
+            set(name, old_entry[:values])
+          end
+        end
+
+        discarded
+      end
+
       private
 
       def build(vertex_source, fragment_source)

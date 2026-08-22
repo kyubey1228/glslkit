@@ -33,8 +33,14 @@ module Glslkit
         @canvas = canvas
         @performance = JS.global[:performance]
         @request_animation_frame = JS.global
-        @programs = []
         @state = {program: nil}
+        # M11d(reload_program、SPEC-livereload.md §4)専用の追跡状態。
+        # development専用の機能であり、リークは許容する
+        # (production相当の環境ではlive_reloadをrequireせず、ここが増え
+        # 続ける経路自体を使わないため実害が無い。§4.1コメント参照)。
+        @programs = {} # name(String) => Program
+        @program_names = {}.compare_by_identity # Program => name(String)
+        @geometries = Hash.new { |h, k| h[k] = [] } # name(String) => [Geometry]
       end
 
       def width
@@ -56,7 +62,7 @@ module Glslkit
         end
         created = Program.new(@gl, entry,
           vertex: vertex, fragment: fragment, source_maps: normalized_maps, state: @state)
-        @programs << created
+        register_program(name.to_s, created)
         @current_program = created
       end
 
@@ -64,7 +70,54 @@ module Glslkit
         target = program || @current_program
         raise UnknownProgramError, "create a program before creating geometry" unless target
 
-        Geometry.new(@gl, target, attributes: attributes, indices: indices, mode: mode)
+        created = Geometry.new(@gl, target, attributes: attributes, indices: indices, mode: mode)
+        program_name = @program_names[target]
+        @geometries[program_name] << created if program_name
+        created
+      end
+
+      # M11d: Program単体ではなくContextの責務(SPEC-livereload.md 決定2)。
+      # 新しいシェーダのコンパイル・リンクが両方成功して初めて内部の
+      # ハンドルを差し替える。失敗時は古いProgramのまま
+      # CompileError/LinkErrorをそのまま投げる(§4.1)。
+      #
+      # attribute locationが新旧で変わっていた場合は、既存のVAOをそのまま
+      # 使うと壊れた描画になるため、ReloadIncompatibleErrorを投げて
+      # ページのリロードを促す(§4.2)。無言で壊れた描画を続けない。
+      #
+      # uniform値は名前ベースで引き継ぐ(§4.3)。名前・type・element_countが
+      # すべて一致するものだけ復元し、それ以外は破棄してdiagnosticsに
+      # 載せる(例外にはしない)。戻り値のResult#ok?はこの診断だけを見る —
+      # コンパイル/リンク/location不一致は例外なので、ここまで来た時点で
+      # 差し替え自体は成功している。
+      def reload_program(name, vertex:, fragment:, manifest:, source_maps: {})
+        key = name.to_s
+        old_program = @programs.fetch(key) do
+          raise UnknownProgramError, "no such program to reload (never created via Context#program): #{name}"
+        end
+
+        manifest_hash = manifest.respond_to?(:to_h) ? manifest.to_h : manifest
+        entry = manifest_hash.fetch("programs").fetch(key) do
+          raise UnknownProgramError, "program not found in manifest: #{name}"
+        end
+        normalized_maps = source_maps.each_with_object({}) do |(stage, map), maps|
+          maps[stage.to_sym] = map.is_a?(Hash) ? Glslkit::SourceMap.from_h(map) : map
+        end
+
+        new_program = Program.new(@gl, entry,
+          vertex: vertex, fragment: fragment, source_maps: normalized_maps, state: @state)
+
+        check_geometry_compatibility!(key, new_program)
+
+        discarded = new_program.restore_uniforms_from(old_program)
+        diagnostics = discarded.map { |info| uniform_discard_diagnostic(key, info) }
+
+        @programs[key] = new_program
+        @program_names.delete(old_program)
+        @program_names[new_program] = key
+        @current_program = new_program if @current_program.equal?(old_program)
+
+        ReloadResult.new(diagnostics: diagnostics)
       end
 
       def texture2d(width:, height:, data:, unit: 0)
@@ -117,6 +170,41 @@ module Glslkit
       end
 
       private
+
+      def register_program(name, created)
+        @programs[name] = created
+        @program_names[created] = name
+      end
+
+      # このプログラム名で作られた全Geometryについて、構築時に使った
+      # attribute locationが新Programでも変わっていないかを確認する。
+      # 1つでも変わっていればReloadIncompatibleError。
+      def check_geometry_compatibility!(key, new_program)
+        @geometries[key].each do |geometry|
+          geometry.attribute_locations.each do |attribute_name, old_location|
+            new_location = new_program.attribute_locations[attribute_name]
+            next if new_location == old_location
+
+            raise ReloadIncompatibleError,
+              "attribute #{attribute_name} location changed (#{old_location.inspect} -> " \
+                "#{new_location.inspect}) while reloading #{key}; reload the page"
+          end
+        end
+      end
+
+      def uniform_discard_diagnostic(program_name, discarded)
+        message = case discarded.fetch(:reason)
+        when :removed
+          "uniform #{discarded.fetch(:name)} no longer exists in the reloaded shader; discarding its previous value"
+        when :type_changed
+          "uniform #{discarded.fetch(:name)} changed type (#{discarded.fetch(:from)} -> " \
+            "#{discarded.fetch(:to)}); discarding its previous value"
+        end
+        Glslkit::Diagnostic.new(
+          severity: :warning, code: "W101", message: message,
+          program: program_name, stage: nil, name: discarded.fetch(:name).to_s, file: nil, line: nil
+        )
+      end
 
       def check_error
         error = @gl.call(:getError).to_i

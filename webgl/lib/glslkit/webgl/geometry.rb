@@ -3,12 +3,16 @@
 module Glslkit
   module WebGL
     class Geometry
-      attr_reader :vao, :count, :indexed, :index_type, :mode
+      attr_reader :vao, :count, :indexed, :index_type, :mode, :attribute_locations
 
       def initialize(gl, program, attributes:, indices: nil, mode: nil)
         @gl = gl
         @vao = gl.call(:createVertexArray)
         @mode = mode || gl[:TRIANGLES]
+        # M11d: 構築時に実際に使ったattributeのlocationを保持する
+        # (SPEC-livereload.md §4.2)。reload時、Contextがこれと新Programの
+        # locationを突き合わせ、このGeometryのVAOがそのまま使えるかを判断する。
+        @attribute_locations = {}
         gl.call(:bindVertexArray, @vao)
         build_attributes(program, attributes)
         build_indices(indices)
@@ -24,6 +28,7 @@ module Glslkit
           location = program.attribute_locations.fetch(name.to_sym) do
             raise KeyError, "attribute not found in manifest: #{name}"
           end
+          @attribute_locations[name.to_sym] = location
           next if location.to_i < 0
 
           components = config.fetch(:components)

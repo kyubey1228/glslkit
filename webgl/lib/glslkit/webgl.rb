@@ -27,6 +27,7 @@ end
 
 require_relative "webgl/errors"
 require_relative "webgl/matrix"
+require_relative "webgl/reload_result"
 require_relative "webgl/program"
 require_relative "webgl/geometry"
 require_relative "webgl/texture"
