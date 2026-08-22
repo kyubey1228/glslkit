@@ -31,35 +31,40 @@ module Glslkit
       def generate(shaders_dir:, out_dir:)
         root = File.expand_path(shaders_dir)
         FileUtils.mkdir_p(out_dir)
-        preprocessor = Glslkit::Preprocessor.new(
-          resolver: Glslkit::Resolvers::FileSystem.new(load_paths: [root]),
-          line_directives: false
-        )
+        resolver = Glslkit::Resolvers::FileSystem.new(load_paths: [root])
 
         program_stage_paths(root).sort.map do |name, stages|
-          write_program(preprocessor, name, stages, out_dir)
+          write_program(resolver, name, stages, out_dir)
         end
       end
 
-      def write_program(preprocessor, name, stages, out_dir)
-        module_name_for(name) # 実際にファイルを読む前に名前だけ先に検証する(fail fast)。
-        vertex = preprocessor.process(stages.fetch(:vertex))
-        fragment = preprocessor.process(stages.fetch(:fragment))
-        program = Glslkit::Program.new(name: name, sources: {vertex: vertex, fragment: fragment})
+      # 実体(前処理→Program化→検証→Manifest組み立て)は Glslkit::Bundle が
+      # 持つ(M11b)。ここは Bundle の結果を見て、生成物として書き出すか
+      # 例外を投げるかを判断するだけの薄いラッパー。
+      def write_program(resolver, name, stages, out_dir)
+        module_name_for(name) # 実際にBundleを呼ぶ前に名前だけ先に検証する(fail fast)。
+        result = Glslkit::Bundle.build(
+          resolver: resolver, name: name, vertex: stages.fetch(:vertex), fragment: stages.fetch(:fragment),
+          line_directives: false, now: EMBEDDED_TIMESTAMP
+        )
 
-        result = Glslkit::Validator.new.validate(program)
-        unless result.ok?
-          raise ValidationError, "glslkit:embed validation failed for #{name}:\n#{result.errors.join("\n")}"
+        case result.kind
+        when :preprocess
+          raise result.error
+        when :validation
+          errors = result.diagnostics.select(&:error?)
+          raise ValidationError, "glslkit:embed validation failed for #{name}:\n#{errors.join("\n")}"
         end
+
         # 警告は生成を止めない(エラーと違う)が、握り潰さず必ず標準エラーに出す。
         # rakeタスク経由でなく Embed.generate を直接呼んだ場合でも見えるように、
         # ここ(ライブラリ側)で出す。呼び出し側での二重出力は行わない。
-        result.warnings.each { |warning| warn "[glslkit:embed] #{name}: #{warning}" }
+        warnings = result.diagnostics.select(&:warning?)
+        warnings.each { |warning| warn "[glslkit:embed] #{name}: #{warning}" }
 
-        manifest = Glslkit::Manifest.build(programs: [program], urls: {name => stages}, now: EMBEDDED_TIMESTAMP)
         out_path = File.join(out_dir, "#{name}_shaders.rb")
-        File.write(out_path, render(name: name, manifest: manifest, vertex: vertex, fragment: fragment))
-        {name: name, path: out_path, warnings: result.warnings}
+        File.write(out_path, render(name: name, manifest: result.manifest, vertex: result.vertex, fragment: result.fragment))
+        {name: name, path: out_path, warnings: warnings}
       end
 
       # {"hello" => {vertex: "hello.vert", fragment: "hello.frag"}, ...} を返す。
